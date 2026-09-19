@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # Covers the workflows and the pinned upload step in action.yml. The pbiplint CLI version is
+  # pinned by hand in action.yml; see RELEASING.md.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly

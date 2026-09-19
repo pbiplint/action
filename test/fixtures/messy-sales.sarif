@@ -1,0 +1,3547 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "pbiplint",
+          "version": "0.1.2",
+          "informationUri": "https://pbiplint.com",
+          "rules": [
+            {
+              "id": "DAX_COLUMNS_FULLY_QUALIFIED",
+              "name": "Column references should be fully qualified",
+              "shortDescription": {
+                "text": "Column references should be fully qualified"
+              },
+              "fullDescription": {
+                "text": "Measures and row-level security filters that refer to a column by its bare name, [Column], instead of 'Table'[Column].",
+                "markdown": "Measures and row-level security filters that refer to a column by its bare name, `[Column]`, instead of `'Table'[Column]`."
+              },
+              "help": {
+                "text": "Why it matters\n\nIn DAX a bare [Name] is the convention for a measure. A column written the same way reads as a measure to everyone who maintains the model, and the two behave differently in a row context, so the expression is misread before it is ever debugged. The bare form also breaks when the column moves to another table, or when a measure with the same name is added and the engine binds to that instead.\n\nHow to fix it\n\nWrite 'Table'[Column] for every column reference. The formula bar in Power BI Desktop completes the qualified form when you start typing the table name.\n\nQuirks\n\n- Calculation items are in the rule's scope but never fire, because Tabular Editor does not resolve bare column references inside calculation items and pbiplint matches that.\n- A bare name that matches any measure in the model is treated as a measure reference, so a column that shares its name with a measure is never flagged.\n- References are found by pattern matching, so a [Column] inside a string or a comment counts.\n\nRead more: https://pbiplint.com/rules/dax-columns-fully-qualified",
+                "markdown": "### Why it matters\n\nIn DAX a bare `[Name]` is the convention for a measure. A column written the same way reads as a measure to everyone who maintains the model, and the two behave differently in a row context, so the expression is misread before it is ever debugged. The bare form also breaks when the column moves to another table, or when a measure with the same name is added and the engine binds to that instead.\n\n### How to fix it\n\nWrite `'Table'[Column]` for every column reference. The formula bar in Power BI Desktop completes the qualified form when you start typing the table name.\n\n### Quirks\n\n- Calculation items are in the rule's scope but never fire, because Tabular Editor does not resolve bare column references inside calculation items and pbiplint matches that.\n- A bare name that matches any measure in the model is treated as a measure reference, so a column that shares its name with a measure is never flagged.\n- References are found by pattern matching, so a `[Column]` inside a string or a comment counts.\n\nRead more: https://pbiplint.com/rules/dax-columns-fully-qualified"
+              },
+              "helpUri": "https://pbiplint.com/rules/dax-columns-fully-qualified",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "DAX Expressions"
+              }
+            },
+            {
+              "id": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+              "name": "Provide format string for measures",
+              "shortDescription": {
+                "text": "Provide format string for measures"
+              },
+              "fullDescription": {
+                "text": "Visible measures with no format string and no dynamic format string.",
+                "markdown": "Visible measures with no format string and no dynamic format string."
+              },
+              "help": {
+                "text": "Why it matters\n\nA measure with no format string is rendered with the client's default, which usually means no thousands separator and a decimal count that varies with the data, so the same measure can look different in two visuals on the same page. Setting the format on the measure fixes the presentation once for every report that will ever use the model, instead of leaving each report author to set it per visual and get it slightly wrong. Hidden measures and measures on hidden tables are not checked, because nothing displays them directly; a measure that has only a dynamic format string is also left alone.\n\nHow to fix it\n\nSet the Format under Measure tools in Power BI Desktop, or add formatString under the measure in the TMDL file: #,0 for whole numbers, #,0.00 for decimals, a currency format such as $#,0.00, or #,0.0%;-#,0.0%;#,0.0% for percentages.\n\nQuirks\n\n- A measure with only a dynamic format string passes here but fires INTEGER_FORMATTING, which reads the static format string alone.\n\nRead more: https://pbiplint.com/rules/provide-format-string-for-measures",
+                "markdown": "### Why it matters\n\nA measure with no format string is rendered with the client's default, which usually means no thousands separator and a decimal count that varies with the data, so the same measure can look different in two visuals on the same page. Setting the format on the measure fixes the presentation once for every report that will ever use the model, instead of leaving each report author to set it per visual and get it slightly wrong. Hidden measures and measures on hidden tables are not checked, because nothing displays them directly; a measure that has only a dynamic format string is also left alone.\n\n### How to fix it\n\nSet the Format under Measure tools in Power BI Desktop, or add `formatString` under the measure in the TMDL file: `#,0` for whole numbers, `#,0.00` for decimals, a currency format such as `$#,0.00`, or `#,0.0%;-#,0.0%;#,0.0%` for percentages.\n\n### Quirks\n\n- A measure with only a dynamic format string passes here but fires `INTEGER_FORMATTING`, which reads the static format string alone.\n\nRead more: https://pbiplint.com/rules/provide-format-string-for-measures"
+              },
+              "helpUri": "https://pbiplint.com/rules/provide-format-string-for-measures",
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "category": "Formatting"
+              }
+            },
+            {
+              "id": "AVOID_FLOATING_POINT_DATA_TYPES",
+              "name": "Do not use floating point data types",
+              "shortDescription": {
+                "text": "Do not use floating point data types"
+              },
+              "fullDescription": {
+                "text": "Columns of any kind whose data type is Double, which Power BI Desktop calls Decimal Number.",
+                "markdown": "Columns of any kind whose data type is Double, which Power BI Desktop calls Decimal Number."
+              },
+              "help": {
+                "text": "Why it matters\n\nDouble is binary floating point, so values like 0.1 have no exact representation and sums drift in the last digits. Two totals that should match can differ by a fraction of a cent, and a money column stored as Double compresses worse than the same values as Fixed Decimal Number, so it costs memory as well. Fixed Decimal Number stores four decimal places exactly, and Whole Number compresses best of all.\n\nHow to fix it\n\nIn Power Query, change the column type to Fixed Decimal Number or Whole Number so the conversion happens before load. Changing it in the model view works too. In the TMDL file the property is dataType: decimal or dataType: int64. Keep Double only for values that need more than four decimal places, such as scientific measurements.\n\nRead more: https://pbiplint.com/rules/avoid-floating-point-data-types",
+                "markdown": "### Why it matters\n\nDouble is binary floating point, so values like 0.1 have no exact representation and sums drift in the last digits. Two totals that should match can differ by a fraction of a cent, and a money column stored as Double compresses worse than the same values as Fixed Decimal Number, so it costs memory as well. Fixed Decimal Number stores four decimal places exactly, and Whole Number compresses best of all.\n\n### How to fix it\n\nIn Power Query, change the column type to Fixed Decimal Number or Whole Number so the conversion happens before load. Changing it in the model view works too. In the TMDL file the property is `dataType: decimal` or `dataType: int64`. Keep Double only for values that need more than four decimal places, such as scientific measurements.\n\nRead more: https://pbiplint.com/rules/avoid-floating-point-data-types"
+              },
+              "helpUri": "https://pbiplint.com/rules/avoid-floating-point-data-types",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "Performance"
+              }
+            },
+            {
+              "id": "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
+              "name": "Date/calendar tables should be marked as a date table",
+              "shortDescription": {
+                "text": "Date/calendar tables should be marked as a date table"
+              },
+              "fullDescription": {
+                "text": "Tables with date or calendar in the name that are not marked as a date table, meaning the data category is not Time or no DateTime column is marked as the key.",
+                "markdown": "Tables with date or calendar in the name that are not marked as a date table, meaning the data category is not Time or no DateTime column is marked as the key."
+              },
+              "help": {
+                "text": "Why it matters\n\nMarking the date table tells the engine which column is the calendar key, and every time intelligence function relies on it: DATESYTD, SAMEPERIODLASTYEAR, and the rest return wrong or blank results over an unmarked table without raising any error. Marking it also lets you turn off Auto date/time, which otherwise adds a hidden date table for every date column in the model.\n\nHow to fix it\n\nIn Power BI Desktop, select the table, open Table tools, choose Mark as date table, and pick the date column. In the TMDL file the result is dataCategory: Time on the table and isKey on the date column.\n\nQuirks\n\n- The name test is a substring, so a table called Updates or Candidates fires too.\n\nRead more: https://pbiplint.com/rules/date-calendar-tables-should-be-marked-as-a-date-table",
+                "markdown": "### Why it matters\n\nMarking the date table tells the engine which column is the calendar key, and every time intelligence function relies on it: DATESYTD, SAMEPERIODLASTYEAR, and the rest return wrong or blank results over an unmarked table without raising any error. Marking it also lets you turn off Auto date/time, which otherwise adds a hidden date table for every date column in the model.\n\n### How to fix it\n\nIn Power BI Desktop, select the table, open Table tools, choose Mark as date table, and pick the date column. In the TMDL file the result is `dataCategory: Time` on the table and `isKey` on the date column.\n\n### Quirks\n\n- The name test is a substring, so a table called Updates or Candidates fires too.\n\nRead more: https://pbiplint.com/rules/date-calendar-tables-should-be-marked-as-a-date-table"
+              },
+              "helpUri": "https://pbiplint.com/rules/date-calendar-tables-should-be-marked-as-a-date-table",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "Performance"
+              }
+            },
+            {
+              "id": "MODEL_SHOULD_HAVE_A_DATE_TABLE",
+              "name": "Model should have a date table",
+              "shortDescription": {
+                "text": "Model should have a date table"
+              },
+              "fullDescription": {
+                "text": "Models with no table that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets.",
+                "markdown": "Models with no table that has the data category Time and a DateTime column marked as the key, which is what Mark as date table sets."
+              },
+              "help": {
+                "text": "Why it matters\n\nEvery time intelligence function needs a contiguous date column to work over, and the marked date table is where it finds one. Without it, the model either leans on Auto date/time, which adds a hidden date table per date column and cannot be extended with fiscal periods or holidays, or does no time intelligence at all. A single shared date table also gives every fact table the same month, quarter, and year attributes, so visuals from different tables line up.\n\nHow to fix it\n\nAdd a date table with one row per day covering every date in the model, from the source, from Power Query, or with CALENDAR in DAX. Mark it as a date table under Table tools and relate each fact table's date column to it. A date table built in DAX satisfies this rule, though REDUCE_USAGE_OF_CALCULATED_TABLES will list it.\n\nRead more: https://pbiplint.com/rules/model-should-have-a-date-table",
+                "markdown": "### Why it matters\n\nEvery time intelligence function needs a contiguous date column to work over, and the marked date table is where it finds one. Without it, the model either leans on Auto date/time, which adds a hidden date table per date column and cannot be extended with fiscal periods or holidays, or does no time intelligence at all. A single shared date table also gives every fact table the same month, quarter, and year attributes, so visuals from different tables line up.\n\n### How to fix it\n\nAdd a date table with one row per day covering every date in the model, from the source, from Power Query, or with CALENDAR in DAX. Mark it as a date table under Table tools and relate each fact table's date column to it. A date table built in DAX satisfies this rule, though `REDUCE_USAGE_OF_CALCULATED_TABLES` will list it.\n\nRead more: https://pbiplint.com/rules/model-should-have-a-date-table"
+              },
+              "helpUri": "https://pbiplint.com/rules/model-should-have-a-date-table",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "Performance"
+              }
+            },
+            {
+              "id": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
+              "name": "Use the DIVIDE function for division",
+              "shortDescription": {
+                "text": "Use the DIVIDE function for division"
+              },
+              "fullDescription": {
+                "text": "Expressions that use the division operator right after a closing bracket or parenthesis, such as [Sales] / [Cost] or SUM(...) / SUM(...). A slash that starts a comment is ignored.",
+                "markdown": "Expressions that use the division operator right after a closing bracket or parenthesis, such as `[Sales] / [Cost]` or `SUM(...) / SUM(...)`. A slash that starts a comment is ignored."
+              },
+              "help": {
+                "text": "Why it matters\n\nDividing by a zero or blank denominator with / produces an error, and an error in one cell takes down the whole visual with a generic message. DIVIDE returns blank in that case, or an alternate result you choose, so the visual shows a gap where the data has one instead of failing.\n\nHow to fix it\n\nWrite DIVIDE([Sales], [Cost]), with a third argument when you want something other than blank for a zero denominator.\n\nQuirks\n\n- A slash after a number or a variable name is not matched: 1 / [Sales] and total / count pass.\n- Division by a constant, [Sales] / 100, is flagged even though it cannot fail.\n\nRead more: https://pbiplint.com/rules/use-the-divide-function-for-division",
+                "markdown": "### Why it matters\n\nDividing by a zero or blank denominator with `/` produces an error, and an error in one cell takes down the whole visual with a generic message. DIVIDE returns blank in that case, or an alternate result you choose, so the visual shows a gap where the data has one instead of failing.\n\n### How to fix it\n\nWrite `DIVIDE([Sales], [Cost])`, with a third argument when you want something other than blank for a zero denominator.\n\n### Quirks\n\n- A slash after a number or a variable name is not matched: `1 / [Sales]` and `total / count` pass.\n- Division by a constant, `[Sales] / 100`, is flagged even though it cannot fail.\n\nRead more: https://pbiplint.com/rules/use-the-divide-function-for-division"
+              },
+              "helpUri": "https://pbiplint.com/rules/use-the-divide-function-for-division",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "DAX Expressions"
+              }
+            },
+            {
+              "id": "INTEGER_FORMATTING",
+              "name": "Whole numbers should be formatted with thousands separators and no decimals",
+              "shortDescription": {
+                "text": "Whole numbers should be formatted with thousands separators and no decimals"
+              },
+              "fullDescription": {
+                "text": "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are #,0, #,0.0, and any string containing $ or %. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count. Each finding says what the rule saw: no format string, format string \"0.00\", or dynamic format string only.",
+                "markdown": "Measures whose static format string is not a recognized whole-number, currency, or percentage format. The only format strings the rule accepts are `#,0`, `#,0.0`, and any string containing `$` or `%`. A measure with no format string at all fires too, and that is the common case: the rule reads only the format string, so it cannot tell an unformatted currency or ratio from an unformatted count. Each finding says what the rule saw: `no format string`, `format string \"0.00\"`, or `dynamic format string only`."
+              },
+              "help": {
+                "text": "Why it matters\n\nAn unformatted whole number is rendered with whatever default the client picks, so a measure that should read 1,234,567 can appear as 1234567 and leave the reader counting digits. Thousands separators are the single biggest readability win on a card or in a table column, and setting the format on the measure means every visual inherits it instead of each report author fixing it by hand and getting it slightly different. Currency and percentage measures follow their own conventions, which is why a format string containing $ or % is left alone by this rule.\n\nHow to fix it\n\nSet a format string that matches what the measure represents: #,0 for counts and other whole numbers, a currency format such as $#,0.00 for money, or #,0.0%;-#,0.0%;#,0.0% for percentages, which is the exact string PERCENTAGE_FORMATTING expects. In Power BI Desktop the Format box under Measure tools takes any of these. In the TMDL file the property is formatString: #,0 under the measure.\n\nQuirks\n\n- A measure with no format string at all is flagged by this rule as well as by PROVIDE_FORMAT_STRING_FOR_MEASURES. Setting the format string once clears both findings.\n- A measure with a dynamic format string but no static format string is flagged, because the source rule reads only the static format string.\n- Currency formats that do not use the $ character, for example €#,0.00, are flagged as though they were unformatted numbers, because the source rule looks for $ only.\n\nRead more: https://pbiplint.com/rules/integer-formatting",
+                "markdown": "### Why it matters\n\nAn unformatted whole number is rendered with whatever default the client picks, so a measure that should read 1,234,567 can appear as 1234567 and leave the reader counting digits. Thousands separators are the single biggest readability win on a card or in a table column, and setting the format on the measure means every visual inherits it instead of each report author fixing it by hand and getting it slightly different. Currency and percentage measures follow their own conventions, which is why a format string containing $ or % is left alone by this rule.\n\n### How to fix it\n\nSet a format string that matches what the measure represents: `#,0` for counts and other whole numbers, a currency format such as `$#,0.00` for money, or `#,0.0%;-#,0.0%;#,0.0%` for percentages, which is the exact string `PERCENTAGE_FORMATTING` expects. In Power BI Desktop the Format box under Measure tools takes any of these. In the TMDL file the property is `formatString: #,0` under the measure.\n\n### Quirks\n\n- A measure with no format string at all is flagged by this rule as well as by `PROVIDE_FORMAT_STRING_FOR_MEASURES`. Setting the format string once clears both findings.\n- A measure with a dynamic format string but no static format string is flagged, because the source rule reads only the static format string.\n- Currency formats that do not use the `$` character, for example `€#,0.00`, are flagged as though they were unformatted numbers, because the source rule looks for `$` only.\n\nRead more: https://pbiplint.com/rules/integer-formatting"
+              },
+              "helpUri": "https://pbiplint.com/rules/integer-formatting",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "Formatting"
+              }
+            },
+            {
+              "id": "HIDE_FOREIGN_KEYS",
+              "name": "Hide foreign keys",
+              "shortDescription": {
+                "text": "Hide foreign keys"
+              },
+              "fullDescription": {
+                "text": "Visible columns whose name matches the from column of a relationship whose from side is many. Only the from cardinality is tested, so a many-to-many relationship counts here too, not just many-to-one.",
+                "markdown": "Visible columns whose name matches the from column of a relationship whose from side is many. Only the from cardinality is tested, so a many-to-many relationship counts here too, not just many-to-one."
+              },
+              "help": {
+                "text": "Why it matters\n\nA key column on the many side of a relationship carries no meaning for a report author: the values are surrogate integers, and grouping by the fact table's key gives one row per key value labeled with a number nobody recognizes. Leaving it visible also puts two versions of the same field in the field list, one on the fact table and one on the dimension, and only the dimension's version filters the way people expect. Hiding the key removes the wrong choice from the field list without changing anything about how the model behaves.\n\nHow to fix it\n\nHide the column in the model view, or add isHidden under the column in the TMDL file.\n\nQuirks\n\n- The source rule compares from-column names only, not table plus column, so a dimension's key that shares a name with the fact table's foreign key is flagged too. pbiplint keeps this to match Tabular Editor.\n\nRead more: https://pbiplint.com/rules/hide-foreign-keys",
+                "markdown": "### Why it matters\n\nA key column on the many side of a relationship carries no meaning for a report author: the values are surrogate integers, and grouping by the fact table's key gives one row per key value labeled with a number nobody recognizes. Leaving it visible also puts two versions of the same field in the field list, one on the fact table and one on the dimension, and only the dimension's version filters the way people expect. Hiding the key removes the wrong choice from the field list without changing anything about how the model behaves.\n\n### How to fix it\n\nHide the column in the model view, or add `isHidden` under the column in the TMDL file.\n\n### Quirks\n\n- The source rule compares from-column names only, not table plus column, so a dimension's key that shares a name with the fact table's foreign key is flagged too. pbiplint keeps this to match Tabular Editor.\n\nRead more: https://pbiplint.com/rules/hide-foreign-keys"
+              },
+              "helpUri": "https://pbiplint.com/rules/hide-foreign-keys",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "Formatting"
+              }
+            },
+            {
+              "id": "HIDE_FACT_TABLE_COLUMNS",
+              "name": "Hide fact table columns",
+              "shortDescription": {
+                "text": "Hide fact table columns"
+              },
+              "fullDescription": {
+                "text": "Visible numeric columns that a measure aggregates directly with a fully qualified reference, such as SUM('Sales'[Amount]). COUNT, SUM, AVERAGE, MIN, MAX, DISTINCTCOUNT, VALUES, DISTINCT, and their A-suffixed variants count as aggregations.",
+                "markdown": "Visible numeric columns that a measure aggregates directly with a fully qualified reference, such as `SUM('Sales'[Amount])`. COUNT, SUM, AVERAGE, MIN, MAX, DISTINCTCOUNT, VALUES, DISTINCT, and their A-suffixed variants count as aggregations."
+              },
+              "help": {
+                "text": "Why it matters\n\nOnce a measure exists for a column, the column itself is the wrong thing to drag onto a visual: it produces an implicit sum that may not match the measure, ignores whatever logic the measure adds, and sits in the field list right next to the measure under a similar name. Hiding the column leaves one correct choice.\n\nHow to fix it\n\nHide the column in the model view, or add isHidden under the column in the TMDL file.\n\nQuirks\n\n- Only fully qualified references count. SUM([Amount]) inside a measure on the same table does not fire.\n- A visible column in a hidden table is still reported.\n\nRead more: https://pbiplint.com/rules/hide-fact-table-columns",
+                "markdown": "### Why it matters\n\nOnce a measure exists for a column, the column itself is the wrong thing to drag onto a visual: it produces an implicit sum that may not match the measure, ignores whatever logic the measure adds, and sits in the field list right next to the measure under a similar name. Hiding the column leaves one correct choice.\n\n### How to fix it\n\nHide the column in the model view, or add `isHidden` under the column in the TMDL file.\n\n### Quirks\n\n- Only fully qualified references count. `SUM([Amount])` inside a measure on the same table does not fire.\n- A visible column in a hidden table is still reported.\n\nRead more: https://pbiplint.com/rules/hide-fact-table-columns"
+              },
+              "helpUri": "https://pbiplint.com/rules/hide-fact-table-columns",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "Formatting"
+              }
+            },
+            {
+              "id": "MONTH_(AS_A_STRING)_MUST_BE_SORTED",
+              "name": "Month (as a string) must be sorted",
+              "shortDescription": {
+                "text": "Month (as a string) must be sorted"
+              },
+              "fullDescription": {
+                "text": "Text columns with month in the name, but not months, that have no sort-by column.",
+                "markdown": "Text columns with month in the name, but not months, that have no sort-by column."
+              },
+              "help": {
+                "text": "Why it matters\n\nA text month sorts alphabetically: April, August, December. Every axis and slicer that uses the column shows that order until someone notices, and the fix has to be repeated in each visual unless it is made once on the column.\n\nHow to fix it\n\nAdd a month number column, then in Power BI Desktop select the month name column and set Sort by column under Column tools to the number. In the TMDL file the property is sortByColumn: 'Month Number' under the column.\n\nQuirks\n\n- The name test is a substring, so Month Name fires and so does a text column called Monthly Target. Months is excluded, so Months Elapsed passes.\n\nRead more: https://pbiplint.com/rules/month-as-a-string-must-be-sorted",
+                "markdown": "### Why it matters\n\nA text month sorts alphabetically: April, August, December. Every axis and slicer that uses the column shows that order until someone notices, and the fix has to be repeated in each visual unless it is made once on the column.\n\n### How to fix it\n\nAdd a month number column, then in Power BI Desktop select the month name column and set Sort by column under Column tools to the number. In the TMDL file the property is `sortByColumn: 'Month Number'` under the column.\n\n### Quirks\n\n- The name test is a substring, so Month Name fires and so does a text column called Monthly Target. Months is excluded, so Months Elapsed passes.\n\nRead more: https://pbiplint.com/rules/month-as-a-string-must-be-sorted"
+              },
+              "helpUri": "https://pbiplint.com/rules/month-as-a-string-must-be-sorted",
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "category": "Formatting"
+              }
+            },
+            {
+              "id": "OBJECTS_WITH_NO_DESCRIPTION",
+              "name": "Visible objects with no description",
+              "shortDescription": {
+                "text": "Visible objects with no description"
+              },
+              "fullDescription": {
+                "text": "Visible tables, columns, measures, and calculation groups with no description. Visibility is the object's own flag.",
+                "markdown": "Visible tables, columns, measures, and calculation groups with no description. Visibility is the object's own flag."
+              },
+              "help": {
+                "text": "Why it matters\n\nThe description is the tooltip a report author sees when hovering a field in the field list, and it is the only place in the model to say what a measure counts, which currency a column is in, or which of two similar fields to use. Without it, every author works that out from the name, and gets it wrong at about the same rate. Descriptions also feed documentation tools, so the same sentence pays off twice.\n\nHow to fix it\n\nIn Power BI Desktop, open Model view, select the object, and type the Description in the Properties pane. In the TMDL file a description is one or more /// lines directly above the object. With hundreds of objects, Tabular Editor can paste descriptions into many objects at once; the TMDL comment lines need no other tool.\n\nQuirks\n\n- Visibility is the object's own isHidden flag: a visible column inside a hidden table is still reported.\n- A calculation group table is reported once, as a calculation group.\n\nRead more: https://pbiplint.com/rules/objects-with-no-description",
+                "markdown": "### Why it matters\n\nThe description is the tooltip a report author sees when hovering a field in the field list, and it is the only place in the model to say what a measure counts, which currency a column is in, or which of two similar fields to use. Without it, every author works that out from the name, and gets it wrong at about the same rate. Descriptions also feed documentation tools, so the same sentence pays off twice.\n\n### How to fix it\n\nIn Power BI Desktop, open Model view, select the object, and type the Description in the Properties pane. In the TMDL file a description is one or more `///` lines directly above the object. With hundreds of objects, Tabular Editor can paste descriptions into many objects at once; the TMDL comment lines need no other tool.\n\n### Quirks\n\n- Visibility is the object's own isHidden flag: a visible column inside a hidden table is still reported.\n- A calculation group table is reported once, as a calculation group.\n\nRead more: https://pbiplint.com/rules/objects-with-no-description"
+              },
+              "helpUri": "https://pbiplint.com/rules/objects-with-no-description",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "category": "Maintenance"
+              }
+            },
+            {
+              "id": "DATECOLUMN_FORMATSTRING",
+              "name": "Provide format string for \"Date\" columns",
+              "shortDescription": {
+                "text": "Provide format string for \"Date\" columns"
+              },
+              "fullDescription": {
+                "text": "DateTime columns with date in the name whose format string is not exactly mm/dd/yyyy.",
+                "markdown": "DateTime columns with date in the name whose format string is not exactly `mm/dd/yyyy`."
+              },
+              "help": {
+                "text": "Why it matters\n\nA date column with no format string is shown however the viewer's locale and the visual decide, so the same column can read 3/4/2026 in one visual and 4 March 2026 in another. A format string on the column fixes the presentation once for every report. The source ruleset picked the US short date as its convention.\n\nHow to fix it\n\nIn Power BI Desktop, select the column and set the Format under Column tools. In the TMDL file, add formatString: mm/dd/yyyy under the column. The expected format is US-centric; if your convention differs, set the format you want and turn this rule off in pbiplint.config.json, because only the exact string passes.\n\nQuirks\n\n- The name test is a substring, so any column containing the letters date, such as Update Time, is matched.\n- Any other format fires, including dd/mm/yyyy and yyyy-mm-dd.\n\nRead more: https://pbiplint.com/rules/datecolumn-formatstring",
+                "markdown": "### Why it matters\n\nA date column with no format string is shown however the viewer's locale and the visual decide, so the same column can read 3/4/2026 in one visual and 4 March 2026 in another. A format string on the column fixes the presentation once for every report. The source ruleset picked the US short date as its convention.\n\n### How to fix it\n\nIn Power BI Desktop, select the column and set the Format under Column tools. In the TMDL file, add `formatString: mm/dd/yyyy` under the column. The expected format is US-centric; if your convention differs, set the format you want and turn this rule off in `pbiplint.config.json`, because only the exact string passes.\n\n### Quirks\n\n- The name test is a substring, so any column containing the letters date, such as Update Time, is matched.\n- Any other format fires, including `dd/mm/yyyy` and `yyyy-mm-dd`.\n\nRead more: https://pbiplint.com/rules/datecolumn-formatstring"
+              },
+              "helpUri": "https://pbiplint.com/rules/datecolumn-formatstring",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "category": "Formatting"
+              }
+            },
+            {
+              "id": "ADD_DATA_CATEGORY_FOR_COLUMNS",
+              "name": "Add data category for columns",
+              "shortDescription": {
+                "text": "Add data category for columns"
+              },
+              "fullDescription": {
+                "text": "Columns with no data category whose name contains country, continent, or city and whose type is text, or whose name is exactly latitude or longitude and whose type is decimal or double.",
+                "markdown": "Columns with no data category whose name contains country, continent, or city and whose type is text, or whose name is exactly latitude or longitude and whose type is decimal or double."
+              },
+              "help": {
+                "text": "Why it matters\n\nMap visuals bind a field by its data category, not by its name. Without one, a City column is geocoded by guesswork and can land in the wrong country when names repeat, and Latitude and Longitude are treated as ordinary numbers, so they are summed by default and the map draws a single point in the ocean. The category lives on the model, so every report inherits it once it is set, and it costs nothing at refresh or query time.\n\nHow to fix it\n\nIn Power BI Desktop, select the column, open Column tools, and choose the Data category. In the TMDL file, add dataCategory: City, dataCategory: Country, dataCategory: Continent, dataCategory: Latitude, or dataCategory: Longitude under the column.\n\nQuirks\n\n- The name test is a substring, so a text column called City Code or Country Manager fires too. Latitude and Longitude must match the whole name.\n\nRead more: https://pbiplint.com/rules/add-data-category-for-columns",
+                "markdown": "### Why it matters\n\nMap visuals bind a field by its data category, not by its name. Without one, a City column is geocoded by guesswork and can land in the wrong country when names repeat, and Latitude and Longitude are treated as ordinary numbers, so they are summed by default and the map draws a single point in the ocean. The category lives on the model, so every report inherits it once it is set, and it costs nothing at refresh or query time.\n\n### How to fix it\n\nIn Power BI Desktop, select the column, open Column tools, and choose the Data category. In the TMDL file, add `dataCategory: City`, `dataCategory: Country`, `dataCategory: Continent`, `dataCategory: Latitude`, or `dataCategory: Longitude` under the column.\n\n### Quirks\n\n- The name test is a substring, so a text column called City Code or Country Manager fires too. Latitude and Longitude must match the whole name.\n\nRead more: https://pbiplint.com/rules/add-data-category-for-columns"
+              },
+              "helpUri": "https://pbiplint.com/rules/add-data-category-for-columns",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "category": "Formatting"
+              }
+            },
+            {
+              "id": "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE",
+              "name": "Relationship columns should be of integer data type",
+              "shortDescription": {
+                "text": "Relationship columns should be of integer data type"
+              },
+              "fullDescription": {
+                "text": "Any column that takes part in a relationship and is not a whole number.",
+                "markdown": "Any column that takes part in a relationship and is not a whole number."
+              },
+              "help": {
+                "text": "Why it matters\n\nA relationship is evaluated by matching values, and whole numbers match fastest and compress smallest. Text keys carry their dictionary into every join, and DateTime keys work but store more than an integer date key would. On the largest fact tables the key columns are often the biggest, so the choice shows up in memory as much as in query time.\n\nHow to fix it\n\nUse integer surrogate keys from the source where they exist. Where the natural key is text, add a numeric key in the source or with a merge in Power Query. Date relationships on a DateTime column are common and work; an integer date key such as 20260904 is the stricter option.\n\nQuirks\n\n- Every date relationship on a DateTime column fires this rule. That is what the source rule does; disable it in pbiplint.config.json if date keys are your standard.\n\nRead more: https://pbiplint.com/rules/relationship-columns-should-be-of-integer-data-type",
+                "markdown": "### Why it matters\n\nA relationship is evaluated by matching values, and whole numbers match fastest and compress smallest. Text keys carry their dictionary into every join, and DateTime keys work but store more than an integer date key would. On the largest fact tables the key columns are often the biggest, so the choice shows up in memory as much as in query time.\n\n### How to fix it\n\nUse integer surrogate keys from the source where they exist. Where the natural key is text, add a numeric key in the source or with a merge in Power Query. Date relationships on a DateTime column are common and work; an integer date key such as 20260904 is the stricter option.\n\n### Quirks\n\n- Every date relationship on a DateTime column fires this rule. That is what the source rule does; disable it in `pbiplint.config.json` if date keys are your standard.\n\nRead more: https://pbiplint.com/rules/relationship-columns-should-be-of-integer-data-type"
+              },
+              "helpUri": "https://pbiplint.com/rules/relationship-columns-should-be-of-integer-data-type",
+              "defaultConfiguration": {
+                "level": "note"
+              },
+              "properties": {
+                "category": "Formatting"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "DAX_COLUMNS_FULLY_QUALIFIED",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "[Total Quantity]: Column references should be fully qualified"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 115
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DAX_COLUMNS_FULLY_QUALIFIED",
+          "ruleIndex": 0,
+          "level": "error",
+          "message": {
+            "text": "[Distinct Customers]: Column references should be fully qualified"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 142
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Total Sales]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 112
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Total Quantity]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 115
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Average Unit Price]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 118
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Total Cost]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Total Discount]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 124
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Net Sales]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 127
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Total Margin]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 130
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Margin %]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 133
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Order Count]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 136
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Average Order Value]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 139
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Distinct Customers]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 142
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Sales YTD]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 145
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Sales LY]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 148
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "PROVIDE_FORMAT_STRING_FOR_MEASURES",
+          "ruleIndex": 1,
+          "level": "error",
+          "message": {
+            "text": "[Sales YoY %]: Provide format string for measures"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 151
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "AVOID_FLOATING_POINT_DATA_TYPES",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "'Promotion'[Discount Pct]: Do not use floating point data types"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "AVOID_FLOATING_POINT_DATA_TYPES",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "'Store'[Latitude]: Do not use floating point data types"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 72
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "AVOID_FLOATING_POINT_DATA_TYPES",
+          "ruleIndex": 2,
+          "level": "warning",
+          "message": {
+            "text": "'Store'[Longitude]: Do not use floating point data types"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 80
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DATE/CALENDAR_TABLES_SHOULD_BE_MARKED_AS_A_DATE_TABLE",
+          "ruleIndex": 3,
+          "level": "warning",
+          "message": {
+            "text": "'Date': Date/calendar tables should be marked as a date table"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "MODEL_SHOULD_HAVE_A_DATE_TABLE",
+          "ruleIndex": 4,
+          "level": "warning",
+          "message": {
+            "text": "Model: Model should have a date table"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/model.tmdl"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "[Margin %]: Use the DIVIDE function for division"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 133
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "[Average Order Value]: Use the DIVIDE function for division"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 139
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "USE_THE_DIVIDE_FUNCTION_FOR_DIVISION",
+          "ruleIndex": 5,
+          "level": "warning",
+          "message": {
+            "text": "[Sales YoY %]: Use the DIVIDE function for division"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 151
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Total Sales]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 112
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Total Quantity]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 115
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Average Unit Price]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 118
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Total Cost]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Total Discount]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 124
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Net Sales]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 127
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Total Margin]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 130
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Margin %]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 133
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Order Count]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 136
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Average Order Value]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 139
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Distinct Customers]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 142
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Sales YTD]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 145
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Sales LY]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 148
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "INTEGER_FORMATTING",
+          "ruleIndex": 6,
+          "level": "warning",
+          "message": {
+            "text": "[Sales YoY %]: Whole numbers should be formatted with thousands separators and no decimals (no format string)"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 151
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Customer'[Customer ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Employee'[Employee ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Product'[Product ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Promotion'[Promotion ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Sale Date]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Product ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Customer ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 32
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Store ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 40
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Employee ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Promotion ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 56
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FOREIGN_KEYS",
+          "ruleIndex": 7,
+          "level": "warning",
+          "message": {
+            "text": "'Store'[Store ID]: Hide foreign keys"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FACT_TABLE_COLUMNS",
+          "ruleIndex": 8,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Sale ID]: Hide fact table columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FACT_TABLE_COLUMNS",
+          "ruleIndex": 8,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Unit Price]: Hide fact table columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 72
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FACT_TABLE_COLUMNS",
+          "ruleIndex": 8,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Unit Cost]: Hide fact table columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 80
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FACT_TABLE_COLUMNS",
+          "ruleIndex": 8,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Discount Amount]: Hide fact table columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 88
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "HIDE_FACT_TABLE_COLUMNS",
+          "ruleIndex": 8,
+          "level": "warning",
+          "message": {
+            "text": "'Sales'[Total Amount]: Hide fact table columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 96
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "MONTH_(AS_A_STRING)_MUST_BE_SORTED",
+          "ruleIndex": 9,
+          "level": "warning",
+          "message": {
+            "text": "'Date'[Month]: Month (as a string) must be sorted"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 40
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer': Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Customer ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Customer Name]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Segment]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Region]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[City]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[State]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 45
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Postal Code]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 53
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Country]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 61
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Email]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 69
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Join Date]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 77
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Loyalty Tier]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 88
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date': Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Date]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Year]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 16
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Quarter]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Quarter Number]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 32
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Month]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 40
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Month Number]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Day of Week]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 56
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Day Number]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 64
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Week of Year]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 72
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Is Weekend]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 80
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Employee': Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Employee'[Employee ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Employee'[Employee Name]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Employee'[Title]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Employee'[Department]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Employee'[Hire Date]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Employee'[Manager ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Employee'[Region]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 56
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Employee'[Email]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 64
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product': Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Product ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Product Name]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Category]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Subcategory]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Brand]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Color]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 45
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Size]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 53
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Standard Cost]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 61
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[List Price]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 69
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Supplier Name]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 77
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Product'[Discontinued]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Product.tmdl"
+                },
+                "region": {
+                  "startLine": 85
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Promotion': Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Promotion'[Promotion ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Promotion'[Promotion Name]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Promotion'[Promotion Type]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Promotion'[Discount Pct]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Promotion'[Start Date]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Promotion'[End Date]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales': Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Sale ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Sale Date]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Product ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 24
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Customer ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 32
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Store ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 40
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Employee ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Promotion ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 56
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Quantity]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 64
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Unit Price]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 72
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Unit Cost]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 80
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Discount Amount]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 88
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Total Amount]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 96
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Net Amount]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 104
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Total Sales]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 112
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Total Quantity]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 115
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Average Unit Price]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 118
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Total Cost]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 121
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Total Discount]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 124
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Net Sales]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 127
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Total Margin]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 130
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Margin %]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 133
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Order Count]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 136
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Average Order Value]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 139
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Distinct Customers]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 142
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Sales YTD]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 145
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Sales LY]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 148
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "[Sales YoY %]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 151
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store': Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Store ID]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Store Name]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Store Type]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 21
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[City]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[State]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Region]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 45
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Country]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 53
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Open Date]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 61
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Latitude]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 72
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Longitude]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 80
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "OBJECTS_WITH_NO_DESCRIPTION",
+          "ruleIndex": 10,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Square Feet]: Visible objects with no description"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 88
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DATECOLUMN_FORMATSTRING",
+          "ruleIndex": 11,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Join Date]: Provide format string for \"Date\" columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 77
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DATECOLUMN_FORMATSTRING",
+          "ruleIndex": 11,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Date]: Provide format string for \"Date\" columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DATECOLUMN_FORMATSTRING",
+          "ruleIndex": 11,
+          "level": "note",
+          "message": {
+            "text": "'Employee'[Hire Date]: Provide format string for \"Date\" columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Employee.tmdl"
+                },
+                "region": {
+                  "startLine": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DATECOLUMN_FORMATSTRING",
+          "ruleIndex": 11,
+          "level": "note",
+          "message": {
+            "text": "'Promotion'[Start Date]: Provide format string for \"Date\" columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DATECOLUMN_FORMATSTRING",
+          "ruleIndex": 11,
+          "level": "note",
+          "message": {
+            "text": "'Promotion'[End Date]: Provide format string for \"Date\" columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Promotion.tmdl"
+                },
+                "region": {
+                  "startLine": 48
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DATECOLUMN_FORMATSTRING",
+          "ruleIndex": 11,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Sale Date]: Provide format string for \"Date\" columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "DATECOLUMN_FORMATSTRING",
+          "ruleIndex": 11,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Open Date]: Provide format string for \"Date\" columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 61
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
+          "ruleIndex": 12,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[City]: Add data category for columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 37
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
+          "ruleIndex": 12,
+          "level": "note",
+          "message": {
+            "text": "'Customer'[Country]: Add data category for columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Customer.tmdl"
+                },
+                "region": {
+                  "startLine": 61
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
+          "ruleIndex": 12,
+          "level": "note",
+          "message": {
+            "text": "'Store'[City]: Add data category for columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 29
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
+          "ruleIndex": 12,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Country]: Add data category for columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 53
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
+          "ruleIndex": 12,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Latitude]: Add data category for columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 72
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "ADD_DATA_CATEGORY_FOR_COLUMNS",
+          "ruleIndex": 12,
+          "level": "note",
+          "message": {
+            "text": "'Store'[Longitude]: Add data category for columns"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Store.tmdl"
+                },
+                "region": {
+                  "startLine": 80
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE",
+          "ruleIndex": 13,
+          "level": "note",
+          "message": {
+            "text": "'Date'[Date]: Relationship columns should be of integer data type"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Date.tmdl"
+                },
+                "region": {
+                  "startLine": 4
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "RELATIONSHIP_COLUMNS_SHOULD_BE_OF_INTEGER_DATA_TYPE",
+          "ruleIndex": 13,
+          "level": "note",
+          "message": {
+            "text": "'Sales'[Sale Date]: Relationship columns should be of integer data type"
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/messy-sales/definition/tables/Sales.tmdl"
+                },
+                "region": {
+                  "startLine": 13
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "name": "pbiplint-action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GitHub Action for pbiplint: lint Power BI projects on every pull request, with annotations, a job summary, and code scanning upload.",
+  "license": "MIT",
+  "author": "McKinley Consulting",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.10.0",
+    "prettier": "^3.9.6",
+    "vitest": "^5.0.0"
+  }
+}

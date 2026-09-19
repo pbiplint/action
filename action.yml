@@ -1,0 +1,150 @@
+# The pbiplint GitHub Action. A composite action: it runs the published pbiplint CLI at a pinned
+# version, then a dependency-free script turns the SARIF report into annotations and a job
+# summary, and GitHub's upload step sends the same file to code scanning. Nothing is bundled, so
+# everything this action runs is readable here.
+name: pbiplint
+description: >-
+  Lint Power BI projects for best-practice violations. Findings become pull request annotations,
+  a job summary, and code scanning alerts. Nothing leaves GitHub.
+author: McKinley Consulting
+branding:
+  icon: check-square
+  color: blue
+
+inputs:
+  path:
+    description: >-
+      What to lint, relative to the workspace: a .SemanticModel folder, a PBIP folder, a
+      definition folder, or one .tmdl file.
+    default: "."
+  fail-on:
+    description: "Lowest severity that fails the step: error, warning, info, or none."
+    default: error
+  config:
+    description: A pbiplint.config.json to use. By default the nearest one above the model applies.
+    default: ""
+  pbiplint-version:
+    description: The pbiplint CLI version to run, as an npm version spec.
+    default: "0.1.2"
+  annotations:
+    description: >-
+      Annotate findings on the run and on changed lines in the pull request (true or false).
+      GitHub shows at most 10 annotations per severity; the job summary always has every finding.
+    default: "true"
+  upload-sarif:
+    description: >-
+      Upload the SARIF report to code scanning (true or false). Needs the security-events write
+      permission and a repository with code scanning; when the upload fails the step notes it and
+      carries on.
+    default: "true"
+  sarif-category:
+    description: >-
+      The code scanning category of the upload. Give each step its own when one workflow lints
+      several models.
+    default: pbiplint
+
+outputs:
+  exit-code:
+    description: "pbiplint's exit code: 0 clean, 1 findings at or above fail-on, 2 usage or input error."
+    value: ${{ steps.lint.outputs.exit-code }}
+  sarif-file:
+    description: Path of the SARIF report.
+    value: ${{ steps.lint.outputs.sarif-file }}
+  findings:
+    description: Number of findings.
+    value: ${{ steps.annotate.outputs.findings }}
+  errors:
+    description: Number of error findings.
+    value: ${{ steps.annotate.outputs.errors }}
+  warnings:
+    description: Number of warning findings.
+    value: ${{ steps.annotate.outputs.warnings }}
+  infos:
+    description: Number of info findings.
+    value: ${{ steps.annotate.outputs.infos }}
+
+runs:
+  using: composite
+  steps:
+    # Inputs reach the script through env, never through ${{ }} inside run, so a path or a
+    # version spec can never inject shell.
+    - name: Lint
+      id: lint
+      shell: bash
+      env:
+        PBIPLINT_PATH: ${{ inputs.path }}
+        PBIPLINT_FAIL_ON: ${{ inputs.fail-on }}
+        PBIPLINT_CONFIG: ${{ inputs.config }}
+        PBIPLINT_VERSION: ${{ inputs.pbiplint-version }}
+        PBIPLINT_UPLOAD: ${{ inputs.upload-sarif }}
+      run: |
+        sarif="$RUNNER_TEMP/pbiplint.sarif"
+        markdown="$RUNNER_TEMP/pbiplint.md"
+        rm -f "$sarif" "$markdown"
+        args=("$PBIPLINT_PATH" --fail-on "$PBIPLINT_FAIL_ON")
+        if [ -n "$PBIPLINT_CONFIG" ]; then args+=(--config "$PBIPLINT_CONFIG"); fi
+        # The exit code is the verdict; the last step exits with it once the report is out.
+        set +e
+        npx --yes "pbiplint@$PBIPLINT_VERSION" "${args[@]}" --format sarif --output "$sarif"
+        code=$?
+        set -e
+        # The same run again as Markdown for the job summary. A usage error would only repeat.
+        if [ "$code" -ne 2 ]; then
+          npx --yes "pbiplint@$PBIPLINT_VERSION" "${args[@]}" --format markdown --output "$markdown" || true
+        fi
+        upload=false
+        if [ "$PBIPLINT_UPLOAD" = "true" ] && [ -s "$sarif" ]; then upload=true; fi
+        {
+          echo "exit-code=$code"
+          echo "sarif-file=$sarif"
+          echo "upload=$upload"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Annotate and summarise
+      id: annotate
+      shell: bash
+      env:
+        PBIPLINT_SARIF: ${{ steps.lint.outputs.sarif-file }}
+        PBIPLINT_EXIT: ${{ steps.lint.outputs.exit-code }}
+        PBIPLINT_ANNOTATIONS: ${{ inputs.annotations }}
+      run: >-
+        node "$GITHUB_ACTION_PATH/src/annotate.mjs"
+        --sarif "$PBIPLINT_SARIF"
+        --markdown "$RUNNER_TEMP/pbiplint.md"
+        --annotations "$PBIPLINT_ANNOTATIONS"
+        --exit-code "$PBIPLINT_EXIT"
+
+    # Pinned to a commit, since this is the one step that holds a write token.
+    - name: Upload SARIF to code scanning
+      id: upload
+      if: steps.lint.outputs.upload == 'true'
+      uses: github/codeql-action/upload-sarif@1c5b675653bb5c22dbe9b12b556ec555138e09fd # v4.38.1
+      continue-on-error: true
+      with:
+        sarif_file: ${{ steps.lint.outputs.sarif-file }}
+        category: ${{ inputs.sarif-category }}
+
+    - name: Note a skipped upload
+      if: steps.upload.outcome == 'failure'
+      shell: bash
+      run: >-
+        echo "::notice title=pbiplint::SARIF upload skipped. Code scanning needs the
+        security-events write permission on the job, and a private repository needs GitHub Code
+        Security. Set upload-sarif to false to stop trying."
+
+    - name: Fail on findings
+      if: steps.lint.outputs.exit-code != '0'
+      shell: bash
+      env:
+        PBIPLINT_EXIT: ${{ steps.lint.outputs.exit-code }}
+        PBIPLINT_FAIL_ON: ${{ inputs.fail-on }}
+        PBIPLINT_ERRORS: ${{ steps.annotate.outputs.errors }}
+        PBIPLINT_WARNINGS: ${{ steps.annotate.outputs.warnings }}
+        PBIPLINT_INFOS: ${{ steps.annotate.outputs.infos }}
+      run: |
+        if [ "$PBIPLINT_EXIT" = "1" ]; then
+          echo "pbiplint: $PBIPLINT_ERRORS errors, $PBIPLINT_WARNINGS warnings, $PBIPLINT_INFOS info. Findings at or above fail-on ($PBIPLINT_FAIL_ON) fail the step; set fail-on to none to report without failing."
+        else
+          echo "pbiplint could not run (exit code $PBIPLINT_EXIT); see the Lint step."
+        fi
+        exit "$PBIPLINT_EXIT"

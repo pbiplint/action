@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+
+  # The action run on itself against the messy-sales example from the main repository, pinned to
+  # a commit so the counts cannot drift under us. Once reporting without failing, which must pass
+  # and must reach code scanning, and once with the default gate, which must fail with exit code
+  # 1. Windows too, since Power BI shops run Windows runners.
+  dogfood:
+    name: dogfood (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check out the sample model
+        uses: actions/checkout@v7
+        with:
+          repository: pbiplint/pbiplint
+          ref: cb3a58121b450cf18b29ebe6f82bb2937002d993
+          path: sample
+          sparse-checkout: examples/messy-sales
+          persist-credentials: false
+      - name: Report without failing
+        id: report
+        uses: ./
+        with:
+          path: sample/examples/messy-sales
+          fail-on: none
+          sarif-category: pbiplint/${{ matrix.os }}
+      - name: Gate on findings
+        id: gate
+        uses: ./
+        continue-on-error: true
+        with:
+          path: sample/examples/messy-sales
+          upload-sarif: false
+      - name: Check both outcomes
+        shell: bash
+        env:
+          REPORT_EXIT: ${{ steps.report.outputs.exit-code }}
+          REPORT_SARIF: ${{ steps.report.outputs.sarif-file }}
+          FINDINGS: ${{ steps.report.outputs.findings }}
+          ERRORS: ${{ steps.report.outputs.errors }}
+          WARNINGS: ${{ steps.report.outputs.warnings }}
+          INFOS: ${{ steps.report.outputs.infos }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+          GATE_EXIT: ${{ steps.gate.outputs.exit-code }}
+        run: |
+          echo "report: exit $REPORT_EXIT, $FINDINGS findings ($ERRORS errors, $WARNINGS warnings, $INFOS info), $REPORT_SARIF"
+          echo "gate: $GATE_OUTCOME, exit $GATE_EXIT"
+          test "$REPORT_EXIT" = "0"
+          test -s "$REPORT_SARIF"
+          test "$ERRORS" -gt 0
+          test "$FINDINGS" -eq $((ERRORS + WARNINGS + INFOS))
+          test "$GATE_OUTCOME" = "failure"
+          test "$GATE_EXIT" = "1"
