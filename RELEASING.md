@@ -33,7 +33,8 @@ is a semver tag and nothing more.
 The release created by the workflow is not on the Marketplace until a person ticks the box. Open
 the release on GitHub, choose Edit, tick "Publish this release to the GitHub Marketplace", pick the
 primary category (Continuous integration) and a secondary one (Code quality), and save. The listing
-takes its name, description, icon, and colour from `action.yml`. Done once for v1.0.0; later
+takes its name, description, icon, and colour from `action.yml`. The description must be under 125
+characters, or the publish is refused; the first attempt on v1.0.0 was, which is why v1.0.1 exists. Done once for v1.0.0; later
 releases carry the listing forward.
 
 ## Pinned actions
