@@ -3,9 +3,9 @@
 # summary, and GitHub's upload step sends the same file to code scanning. Nothing is bundled, so
 # everything this action runs is readable here.
 name: pbiplint
+# The Marketplace refuses a description of 125 characters or more.
 description: >-
-  Lint Power BI projects for best-practice violations. Findings become pull request annotations,
-  a job summary, and code scanning alerts. Nothing leaves GitHub.
+  Lint Power BI projects on every pull request: annotations, a job summary, and code scanning alerts.
 author: McKinley Consulting
 branding:
   icon: check-square
