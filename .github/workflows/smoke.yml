@@ -1,0 +1,42 @@
+# The released action, used the way a workflow elsewhere uses it: pbiplint/action@v1 against the
+# messy-sales example. Not part of CI, because a pull request must test its own code and not the
+# last release. Run it by hand after every release:
+#
+#   gh workflow run smoke.yml --repo pbiplint/action && gh run watch --repo pbiplint/action
+name: Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  released:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the sample model
+        uses: actions/checkout@v7
+        with:
+          repository: pbiplint/pbiplint
+          ref: cb3a58121b450cf18b29ebe6f82bb2937002d993
+          sparse-checkout: examples/messy-sales
+          persist-credentials: false
+      - uses: pbiplint/action@v1
+        id: lint
+        with:
+          path: examples/messy-sales
+          fail-on: none
+          upload-sarif: false
+      - name: Check the outputs
+        env:
+          EXIT: ${{ steps.lint.outputs.exit-code }}
+          FINDINGS: ${{ steps.lint.outputs.findings }}
+          ERRORS: ${{ steps.lint.outputs.errors }}
+          SARIF: ${{ steps.lint.outputs.sarif-file }}
+        run: |
+          echo "exit $EXIT, $FINDINGS findings, $ERRORS errors, $SARIF"
+          test "$EXIT" = "0"
+          test "$ERRORS" -gt 0
+          test -s "$SARIF"
