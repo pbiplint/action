@@ -6,6 +6,10 @@ const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/messy-sales.sarif", import.meta.url), "utf8"),
 );
 
+/** The file of the fixture's first finding, an error on a visual in the sample's report. */
+const FIRST_FILE =
+  "examples/messy-sales/Messy Sales Demo.Report/definition/pages/3cea48e58036b1654474/visuals/6500e9c3f9d74f2958c7/visual.json";
+
 /** A one-run SARIF document with the given rules and results, shaped like pbiplint's. */
 function sarif(rules, results) {
   return { version: "2.1.0", runs: [{ tool: { driver: { name: "pbiplint", rules } }, results }] };
@@ -48,7 +52,7 @@ const HOSTILE = sarif(
 
 describe("countFindings", () => {
   test("counts every result by level", () => {
-    expect(countFindings(fixture)).toEqual({ findings: 161, errors: 16, warnings: 39, infos: 106 });
+    expect(countFindings(fixture)).toEqual({ findings: 257, errors: 19, warnings: 78, infos: 160 });
   });
 
   test("an empty run counts to zero", () => {
@@ -120,6 +124,14 @@ describe("annotations", () => {
     );
   });
 
+  test("decodes a report finding from the fixture into its workspace path", () => {
+    const uri = fixture.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri;
+    expect(uri).toBe(
+      "examples/messy-sales/Messy%20Sales%20Demo.Report/definition/pages/3cea48e58036b1654474/visuals/6500e9c3f9d74f2958c7/visual.json",
+    );
+    expect(annotations(fixture)[0].file).toBe(FIRST_FILE);
+  });
+
   test("a result without a location becomes an annotation without a file", () => {
     const doc = sarif([RULE], [result("warning", "Model: x")]);
     expect(annotations(doc)[0]).toMatchObject({
@@ -137,9 +149,9 @@ describe("annotations", () => {
     expect(byLevel("notice")).toHaveLength(10);
     // The first result of the fixture is the first error annotated.
     expect(byLevel("error")[0]).toMatchObject({
-      file: "examples/messy-sales/definition/tables/Sales.tmdl",
-      line: 115,
-      title: "Column references should be fully qualified",
+      file: FIRST_FILE,
+      line: 272,
+      title: "Action points at nothing",
     });
   });
 
@@ -261,11 +273,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main, outputs, summary, SUMMARY_LIMIT } from "../src/annotate.mjs";
 
-const COUNTS = { findings: 161, errors: 16, warnings: 39, infos: 106 };
+const COUNTS = { findings: 257, errors: 19, warnings: 78, infos: 160 };
 
 describe("outputs", () => {
   test("writes one name=value line per count", () => {
-    expect(outputs(COUNTS)).toBe("findings=161\nerrors=16\nwarnings=39\ninfos=106\n");
+    expect(outputs(COUNTS)).toBe("findings=257\nerrors=19\nwarnings=78\ninfos=160\n");
   });
 });
 
@@ -277,7 +289,7 @@ describe("summary", () => {
       annotated: 30,
     });
     expect(text).toBe(
-      "# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 161 findings, the first 10 of each severity. The full list is above.\n",
+      "# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 257 findings, the first 10 of each severity. The full list is above.\n",
     );
   });
 
@@ -336,13 +348,13 @@ describe("main", () => {
     main({ sarifPath, markdownPath, annotate: true, exitCode: 1, env, stdout });
     expect(lines).toHaveLength(30);
     expect(lines[0]).toMatch(
-      /^::error file=examples\/messy-sales\/definition\/tables\/Sales\.tmdl,line=115,title=/,
+      /^::error file=examples\/messy-sales\/Messy Sales Demo\.Report\/definition\/pages\/3cea48e58036b1654474\/visuals\/6500e9c3f9d74f2958c7\/visual\.json,line=272,title=Action points at nothing::/,
     );
     expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe(
-      "exit-code=1\nfindings=161\nerrors=16\nwarnings=39\ninfos=106\n",
+      "exit-code=1\nfindings=257\nerrors=19\nwarnings=78\ninfos=160\n",
     );
     expect(readFileSync(env.GITHUB_STEP_SUMMARY, "utf8")).toMatch(
-      /^# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 161 findings/,
+      /^# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 257 findings/,
     );
   });
 
@@ -359,7 +371,7 @@ describe("main", () => {
       stdout,
     });
     expect(lines).toHaveLength(0);
-    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=161\n");
+    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=257\n");
   });
 
   test("copes with a run that produced no report", () => {
@@ -416,9 +428,9 @@ describe("command line", () => {
     );
     expect(r.status).toBe(0);
     expect(r.stdout.split("\n").filter((l) => l.startsWith("::"))).toHaveLength(30);
-    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=161\n");
+    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=257\n");
     expect(readFileSync(env.GITHUB_STEP_SUMMARY, "utf8")).toContain(
-      "Annotations on this run show 30 of 161",
+      "Annotations on this run show 30 of 257",
     );
   });
 });

@@ -6,7 +6,7 @@ is a semver tag and nothing more.
 ## After a pbiplint CLI release
 
 1. On a branch, change the `pbiplint-version` default in `action.yml` to the new version and the
-   `0.1.2` in README.md's inputs table to match.
+   version in README.md's inputs table to match.
 2. Run `npm test`, open a pull request, let CI pass. The dogfood jobs run the action on the
    messy-sales example with the new version.
 3. Merge, then release as below. A CLI patch is a patch here; a CLI minor that adds rules or

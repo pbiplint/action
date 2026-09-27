@@ -14,18 +14,19 @@ branding:
 inputs:
   path:
     description: >-
-      What to lint, relative to the workspace: a .SemanticModel folder, a PBIP folder, a
-      definition folder, or one .tmdl file.
+      What to lint, relative to the workspace: a PBIP folder, a .pbip file, a .SemanticModel or
+      .Report folder, a definition folder, or one .tmdl file.
     default: "."
   fail-on:
     description: "Lowest severity that fails the step: error, warning, info, or none."
     default: error
   config:
-    description: A pbiplint.config.json to use. By default the nearest one above the model applies.
+    description: >-
+      A pbiplint.config.json to use. By default the nearest one above the project applies.
     default: ""
   pbiplint-version:
     description: The pbiplint CLI version to run, as an npm version spec.
-    default: "0.1.2"
+    default: "0.2.0"
   annotations:
     description: >-
       Annotate findings on the run and on changed lines in the pull request (true or false).
@@ -40,7 +41,7 @@ inputs:
   sarif-category:
     description: >-
       The code scanning category of the upload. Give each step its own when one workflow lints
-      several models.
+      several projects.
     default: pbiplint
 
 outputs:

@@ -25,10 +25,11 @@ jobs:
       - run: npm run lint
       - run: npm test
 
-  # The action run on itself against the messy-sales example from the main repository, pinned to
-  # a commit so the counts cannot drift under us. Once reporting without failing, which must pass
-  # and must reach code scanning, and once with the default gate, which must fail with exit code
-  # 1. Windows too, since Power BI shops run Windows runners.
+  # The action run on itself against the messy-sales example project, its model and its report,
+  # from the main repository, pinned to a commit so the counts cannot drift under us. Once
+  # reporting without failing, which must pass and must reach code scanning, and once with the
+  # default gate, which must fail with exit code 1. Windows too, since Power BI shops run Windows
+  # runners.
   dogfood:
     name: dogfood (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -42,11 +43,11 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v7
-      - name: Check out the sample model
+      - name: Check out the sample project
         uses: actions/checkout@v7
         with:
           repository: pbiplint/pbiplint
-          ref: cb3a58121b450cf18b29ebe6f82bb2937002d993
+          ref: 3b1bdf0c99a31e3470d99370419c62762e5c1fe5
           path: sample
           sparse-checkout: examples/messy-sales
           persist-credentials: false
