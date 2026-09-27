@@ -14,8 +14,8 @@ is a semver tag and nothing more.
    `test/fixtures/messy-sales.sarif` with that command from a checkout of the main repository at
    the same commit. Move the tests' pins to what the new file holds: the counts, the outputs line,
    and the first annotation's file, line, and title. Nothing fails on a stale fixture, since the
-   unit tests read the committed file and the dogfood checks do not count findings, so this step
-   is easy to miss.
+   unit tests read the committed file and the dogfood checks pin no count, so this step is easy to
+   miss.
 4. Run `npm test`, open a pull request, let CI pass. The dogfood jobs run the action on the
    messy-sales example with the new version.
 5. Merge, then release as below. A CLI patch is a patch here; a CLI minor that adds rules or
