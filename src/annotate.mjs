@@ -26,6 +26,21 @@ export function countFindings(sarif) {
 /** Artifact URIs are percent-encoded per segment; workflow commands want the plain workspace path. */
 const decodePath = (uri) => uri.split("/").map(decodeURIComponent).join("/");
 
+// The characters a terminal or a log acts on instead of printing: C0 (tab and newline included),
+// DEL, C1, and the Unicode bidirectional embeddings, overrides (U+202A to U+202E), and isolates
+// (U+2066 to U+2069). The same set as pbiplint core's showControls.
+// eslint-disable-next-line no-control-regex -- matching control characters is the whole point
+const CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g;
+
+/**
+ * `text` with each control character shown as a backslash, `u`, and four lowercase hex digits
+ * (ESC as `\u001b`, a newline as `\u000a`), as pbiplint core's showControls writes them. Names
+ * and messages come from the repository being linted, and a hostile one could hide, reorder, or
+ * split what an annotation shows with an escape sequence, a right-to-left override, or a newline.
+ */
+export const showControls = (text) =>
+  String(text).replace(CONTROL, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
+
 export function annotations(sarif, { cap = ANNOTATION_CAP } = {}) {
   const rules = new Map((run(sarif).tool?.driver?.rules ?? []).map((r) => [r.id, r]));
   const taken = { error: 0, warning: 0, notice: 0 };
@@ -43,10 +58,11 @@ export function annotations(sarif, { cap = ANNOTATION_CAP } = {}) {
     const loc = r.locations?.[0]?.physicalLocation;
     out.push({
       level,
+      // The path stays as it is, for GitHub to match to a file; the command escapes it.
       file: loc ? decodePath(loc.artifactLocation.uri) : undefined,
       line: loc?.region?.startLine,
-      title: name,
-      message: `${object}. Rule ${r.ruleId}${where}`,
+      title: showControls(name),
+      message: showControls(`${object}. Rule ${r.ruleId}${where}`),
     });
   }
   return out;

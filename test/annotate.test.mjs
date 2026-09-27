@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { annotations, countFindings, workflowCommand } from "../src/annotate.mjs";
+import { annotations, countFindings, showControls, workflowCommand } from "../src/annotate.mjs";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/messy-sales.sarif", import.meta.url), "utf8"),
@@ -17,6 +17,9 @@ const RULE = {
   helpUri: "https://pbiplint.com/rules/provide-format-string-for-measures",
 };
 
+// eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
+
 function result(level, text, uri, line) {
   return {
     ruleId: RULE.id,
@@ -32,6 +35,16 @@ function result(level, text, uri, line) {
       : {}),
   };
 }
+
+/**
+ * A finding whose rule name and message carry an escape sequence, a right-to-left override, a
+ * newline, a tab, and a carriage return, as a hostile repository could name a measure.
+ */
+const HOSTILE_NAME = "Hidden\u001b[8m rule\u202e";
+const HOSTILE = sarif(
+  [{ ...RULE, name: HOSTILE_NAME }],
+  [result("error", `[Sales\u001b[2J\u202e\n\tTotal]: ${HOSTILE_NAME} (a\r\nb)`, "a.tmdl", 1)],
+);
 
 describe("countFindings", () => {
   test("counts every result by level", () => {
@@ -141,6 +154,64 @@ describe("annotations", () => {
       message: "x: y. Rule SOME_RULE",
     });
   });
+
+  test("shows the control characters in a finding's title and message", () => {
+    expect(annotations(HOSTILE)[0]).toEqual({
+      level: "error",
+      file: "a.tmdl",
+      line: 1,
+      title: "Hidden\\u001b[8m rule\\u202e",
+      message:
+        "[Sales\\u001b[2J\\u202e\\u000a\\u0009Total] (a\\u000d\\u000ab). Rule PROVIDE_FORMAT_STRING_FOR_MEASURES: https://pbiplint.com/rules/provide-format-string-for-measures",
+    });
+  });
+
+  test("leaves ordinary text, accents, and CJK characters in a finding as they are", () => {
+    const doc = sarif(
+      [RULE],
+      [result("warning", "[Café 売上]: Provide format string for measures (Ünïcode)", "a.tmdl", 2)],
+    );
+    expect(annotations(doc)[0]).toMatchObject({
+      title: "Provide format string for measures",
+      message:
+        "[Café 売上] (Ünïcode). Rule PROVIDE_FORMAT_STRING_FOR_MEASURES: https://pbiplint.com/rules/provide-format-string-for-measures",
+    });
+  });
+
+  test("leaves the file as the workspace path, so GitHub can match it", () => {
+    const doc = sarif([RULE], [result("error", "a: x", "odd%E2%80%AEname.tmdl", 1)]);
+    expect(annotations(doc)[0].file).toBe("odd\u202ename.tmdl");
+  });
+});
+
+describe("showControls", () => {
+  test("writes each control character as \\u and four lowercase hex digits", () => {
+    for (const [raw, shown] of [
+      ["\u0000", "\\u0000"],
+      ["\u0009", "\\u0009"],
+      ["\u000a", "\\u000a"],
+      ["\u000d", "\\u000d"],
+      ["\u001b", "\\u001b"],
+      ["\u001f", "\\u001f"],
+      ["\u007f", "\\u007f"],
+      ["\u0080", "\\u0080"],
+      ["\u009f", "\\u009f"],
+      ["\u202a", "\\u202a"],
+      ["\u202e", "\\u202e"],
+      ["\u2066", "\\u2066"],
+      ["\u2069", "\\u2069"],
+    ])
+      expect(showControls(raw), shown).toBe(shown);
+    expect(showControls("Evil\u001b[2J\nName\u202e")).toBe("Evil\\u001b[2J\\u000aName\\u202e");
+  });
+
+  test("leaves a character just outside each range, and ordinary text, as it is", () => {
+    for (const c of ["\u0020", "\u007e", "\u00a0", "\u2029", "\u202f", "\u2065", "\u206a"])
+      expect(showControls(c), c.codePointAt(0).toString(16)).toBe(c);
+    // Accented letters, CJK, and a backslash already in a name print as they are.
+    const plain = "'Sales'[Total é] 売上 C:\\Reports\\u001b";
+    expect(showControls(plain)).toBe(plain);
+  });
 });
 
 describe("workflowCommand", () => {
@@ -173,6 +244,14 @@ describe("workflowCommand", () => {
       }),
     ).toBe(
       "::warning file=odd%2Cname%3Ahere.tmdl,line=1,title=Date/calendar%3A 100%25 sure%2C really::line one%0Aline two 100%25%0D",
+    );
+  });
+
+  test("a finding with control characters becomes a command with none of them raw", () => {
+    const command = workflowCommand(annotations(HOSTILE)[0]);
+    expect(command).not.toMatch(RAW_CONTROL);
+    expect(command).toBe(
+      "::error file=a.tmdl,line=1,title=Hidden\\u001b[8m rule\\u202e::[Sales\\u001b[2J\\u202e\\u000a\\u0009Total] (a\\u000d\\u000ab). Rule PROVIDE_FORMAT_STRING_FOR_MEASURES: https://pbiplint.com/rules/provide-format-string-for-measures",
     );
   });
 });
