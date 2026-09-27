@@ -60,14 +60,14 @@ https://pbiplint.com/rules with what it checks, why, and how to fix it. Configur
 
 ## Outputs
 
-| Output       | What it holds                                                                          |
-| ------------ | -------------------------------------------------------------------------------------- |
-| `exit-code`  | pbiplint's exit code: `0` clean, `1` findings at or above `fail-on`, `2` usage error. |
-| `sarif-file` | Path of the SARIF report, for an upload-artifact step or your own tooling.             |
-| `findings`   | Number of findings.                                                                    |
-| `errors`     | Number of error findings.                                                              |
-| `warnings`   | Number of warning findings.                                                            |
-| `infos`      | Number of info findings.                                                               |
+| Output       | What it holds                                                                                                              |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `exit-code`  | pbiplint's exit code: `0` no findings at or above `fail-on`, `1` findings at or above `fail-on`, `2` usage or input error. |
+| `sarif-file` | Path of the SARIF report, for an upload-artifact step or your own tooling.                                                 |
+| `findings`   | Number of findings.                                                                                                        |
+| `errors`     | Number of error findings.                                                                                                  |
+| `warnings`   | Number of warning findings.                                                                                                |
+| `infos`      | Number of info findings.                                                                                                   |
 
 ## Code scanning
 
@@ -97,14 +97,15 @@ One step per project. Point `path` at each and, if you upload, give each its own
 A `.pbip` file names its report, and the report names its model, so two projects saved in one
 folder lint apart. A repository whose top level is the project folder, with the `.SemanticModel`
 and `.Report` folders in it, needs no `path` at all. For a project in a subfolder, set `path`: from
-the top, pbiplint finds only the model's `.tmdl` files and leaves the report out.
+the top, pbiplint finds only the model's `.tmdl` files and leaves the report out, and the project's
+`pbiplint.config.json` with it.
 
 ## Runners
 
 Works on the GitHub-hosted Ubuntu, Windows, and macOS runners, which all have Node.js. A
 self-hosted runner needs Node.js 20.19 or later on the path. The linter reads only the project
-that `path` names and makes no network calls of its own; the one download is the pinned pbiplint
-package from npm.
+that `path` names and its `pbiplint.config.json`, or the one the `config` input names, and makes no
+network calls of its own; the one download is the pinned pbiplint package from npm.
 
 ## How it works
 
