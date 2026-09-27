@@ -16,11 +16,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out the sample model
+      - name: Check out the sample project
         uses: actions/checkout@v7
         with:
           repository: pbiplint/pbiplint
-          ref: cb3a58121b450cf18b29ebe6f82bb2937002d993
+          ref: 3b1bdf0c99a31e3470d99370419c62762e5c1fe5
           sparse-checkout: examples/messy-sales
           persist-credentials: false
       - uses: pbiplint/action@v1

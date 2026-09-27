@@ -1,10 +1,14 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, test } from "vitest";
-import { annotations, countFindings, workflowCommand } from "../src/annotate.mjs";
+import { annotations, countFindings, showControls, workflowCommand } from "../src/annotate.mjs";
 
 const fixture = JSON.parse(
   readFileSync(new URL("./fixtures/messy-sales.sarif", import.meta.url), "utf8"),
 );
+
+/** The file of the fixture's first finding, an error on a visual in the sample's report. */
+const FIRST_FILE =
+  "examples/messy-sales/Messy Sales Demo.Report/definition/pages/3cea48e58036b1654474/visuals/6500e9c3f9d74f2958c7/visual.json";
 
 /** A one-run SARIF document with the given rules and results, shaped like pbiplint's. */
 function sarif(rules, results) {
@@ -16,6 +20,9 @@ const RULE = {
   name: "Provide format string for measures",
   helpUri: "https://pbiplint.com/rules/provide-format-string-for-measures",
 };
+
+// eslint-disable-next-line no-control-regex -- finding control characters is what this is for
+const RAW_CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/;
 
 function result(level, text, uri, line) {
   return {
@@ -33,9 +40,19 @@ function result(level, text, uri, line) {
   };
 }
 
+/**
+ * A finding whose rule name and message carry an escape sequence, a right-to-left override, a
+ * newline, a tab, and a carriage return, as a hostile repository could name a measure.
+ */
+const HOSTILE_NAME = "Hidden\u001b[8m\n\trule\u202e";
+const HOSTILE = sarif(
+  [{ ...RULE, name: HOSTILE_NAME }],
+  [result("error", `[Sales\u001b[2J\u202e\n\tTotal]: ${HOSTILE_NAME} (a\r\nb)`, "a.tmdl", 1)],
+);
+
 describe("countFindings", () => {
   test("counts every result by level", () => {
-    expect(countFindings(fixture)).toEqual({ findings: 161, errors: 16, warnings: 39, infos: 106 });
+    expect(countFindings(fixture)).toEqual({ findings: 257, errors: 19, warnings: 78, infos: 160 });
   });
 
   test("an empty run counts to zero", () => {
@@ -107,6 +124,14 @@ describe("annotations", () => {
     );
   });
 
+  test("decodes a report finding from the fixture into its workspace path", () => {
+    const uri = fixture.runs[0].results[0].locations[0].physicalLocation.artifactLocation.uri;
+    expect(uri).toBe(
+      "examples/messy-sales/Messy%20Sales%20Demo.Report/definition/pages/3cea48e58036b1654474/visuals/6500e9c3f9d74f2958c7/visual.json",
+    );
+    expect(annotations(fixture)[0].file).toBe(FIRST_FILE);
+  });
+
   test("a result without a location becomes an annotation without a file", () => {
     const doc = sarif([RULE], [result("warning", "Model: x")]);
     expect(annotations(doc)[0]).toMatchObject({
@@ -124,9 +149,9 @@ describe("annotations", () => {
     expect(byLevel("notice")).toHaveLength(10);
     // The first result of the fixture is the first error annotated.
     expect(byLevel("error")[0]).toMatchObject({
-      file: "examples/messy-sales/definition/tables/Sales.tmdl",
-      line: 115,
-      title: "Column references should be fully qualified",
+      file: FIRST_FILE,
+      line: 272,
+      title: "Action points at nothing",
     });
   });
 
@@ -140,6 +165,64 @@ describe("annotations", () => {
       title: "SOME_RULE",
       message: "x: y. Rule SOME_RULE",
     });
+  });
+
+  test("shows the control characters in a finding's title and message", () => {
+    expect(annotations(HOSTILE)[0]).toEqual({
+      level: "error",
+      file: "a.tmdl",
+      line: 1,
+      title: "Hidden\\u001b[8m\\u000a\\u0009rule\\u202e",
+      message:
+        "[Sales\\u001b[2J\\u202e\\u000a\\u0009Total] (a\\u000d\\u000ab). Rule PROVIDE_FORMAT_STRING_FOR_MEASURES: https://pbiplint.com/rules/provide-format-string-for-measures",
+    });
+  });
+
+  test("leaves ordinary text, accents, and CJK characters in a finding as they are", () => {
+    const doc = sarif(
+      [RULE],
+      [result("warning", "[Café 売上]: Provide format string for measures (Ünïcode)", "a.tmdl", 2)],
+    );
+    expect(annotations(doc)[0]).toMatchObject({
+      title: "Provide format string for measures",
+      message:
+        "[Café 売上] (Ünïcode). Rule PROVIDE_FORMAT_STRING_FOR_MEASURES: https://pbiplint.com/rules/provide-format-string-for-measures",
+    });
+  });
+
+  test("leaves the file as the workspace path, so GitHub can match it", () => {
+    const doc = sarif([RULE], [result("error", "a: x", "odd%E2%80%AEname.tmdl", 1)]);
+    expect(annotations(doc)[0].file).toBe("odd\u202ename.tmdl");
+  });
+});
+
+describe("showControls", () => {
+  test("writes each control character as \\u and four lowercase hex digits", () => {
+    for (const [raw, shown] of [
+      ["\u0000", "\\u0000"],
+      ["\u0009", "\\u0009"],
+      ["\u000a", "\\u000a"],
+      ["\u000d", "\\u000d"],
+      ["\u001b", "\\u001b"],
+      ["\u001f", "\\u001f"],
+      ["\u007f", "\\u007f"],
+      ["\u0080", "\\u0080"],
+      ["\u009f", "\\u009f"],
+      ["\u202a", "\\u202a"],
+      ["\u202e", "\\u202e"],
+      ["\u2066", "\\u2066"],
+      ["\u2069", "\\u2069"],
+    ])
+      expect(showControls(raw), shown).toBe(shown);
+    expect(showControls("Evil\u001b[2J\nName\u202e")).toBe("Evil\\u001b[2J\\u000aName\\u202e");
+  });
+
+  test("leaves a character just outside each range, and ordinary text, as it is", () => {
+    for (const c of ["\u0020", "\u007e", "\u00a0", "\u2029", "\u202f", "\u2065", "\u206a"])
+      expect(showControls(c), c.codePointAt(0).toString(16)).toBe(c);
+    // Accented letters, CJK, and a backslash already in a name print as they are.
+    const plain = "'Sales'[Total é] 売上 C:\\Reports\\u001b";
+    expect(showControls(plain)).toBe(plain);
   });
 });
 
@@ -175,6 +258,14 @@ describe("workflowCommand", () => {
       "::warning file=odd%2Cname%3Ahere.tmdl,line=1,title=Date/calendar%3A 100%25 sure%2C really::line one%0Aline two 100%25%0D",
     );
   });
+
+  test("a finding with control characters becomes a command with none of them raw", () => {
+    const command = workflowCommand(annotations(HOSTILE)[0]);
+    expect(command).not.toMatch(RAW_CONTROL);
+    expect(command).toBe(
+      "::error file=a.tmdl,line=1,title=Hidden\\u001b[8m\\u000a\\u0009rule\\u202e::[Sales\\u001b[2J\\u202e\\u000a\\u0009Total] (a\\u000d\\u000ab). Rule PROVIDE_FORMAT_STRING_FOR_MEASURES: https://pbiplint.com/rules/provide-format-string-for-measures",
+    );
+  });
 });
 
 import { mkdtempSync, writeFileSync, existsSync } from "node:fs";
@@ -182,11 +273,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main, outputs, summary, SUMMARY_LIMIT } from "../src/annotate.mjs";
 
-const COUNTS = { findings: 161, errors: 16, warnings: 39, infos: 106 };
+const COUNTS = { findings: 257, errors: 19, warnings: 78, infos: 160 };
 
 describe("outputs", () => {
   test("writes one name=value line per count", () => {
-    expect(outputs(COUNTS)).toBe("findings=161\nerrors=16\nwarnings=39\ninfos=106\n");
+    expect(outputs(COUNTS)).toBe("findings=257\nerrors=19\nwarnings=78\ninfos=160\n");
   });
 });
 
@@ -198,7 +289,7 @@ describe("summary", () => {
       annotated: 30,
     });
     expect(text).toBe(
-      "# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 161 findings, the first 10 of each severity. The full list is above.\n",
+      "# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 257 findings, the first 10 of each severity. The full list is above.\n",
     );
   });
 
@@ -257,13 +348,13 @@ describe("main", () => {
     main({ sarifPath, markdownPath, annotate: true, exitCode: 1, env, stdout });
     expect(lines).toHaveLength(30);
     expect(lines[0]).toMatch(
-      /^::error file=examples\/messy-sales\/definition\/tables\/Sales\.tmdl,line=115,title=/,
+      /^::error file=examples\/messy-sales\/Messy Sales Demo\.Report\/definition\/pages\/3cea48e58036b1654474\/visuals\/6500e9c3f9d74f2958c7\/visual\.json,line=272,title=Action points at nothing::/,
     );
     expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe(
-      "exit-code=1\nfindings=161\nerrors=16\nwarnings=39\ninfos=106\n",
+      "exit-code=1\nfindings=257\nerrors=19\nwarnings=78\ninfos=160\n",
     );
     expect(readFileSync(env.GITHUB_STEP_SUMMARY, "utf8")).toMatch(
-      /^# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 161 findings/,
+      /^# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 257 findings/,
     );
   });
 
@@ -280,7 +371,7 @@ describe("main", () => {
       stdout,
     });
     expect(lines).toHaveLength(0);
-    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=161\n");
+    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=257\n");
   });
 
   test("copes with a run that produced no report", () => {
@@ -337,9 +428,9 @@ describe("command line", () => {
     );
     expect(r.status).toBe(0);
     expect(r.stdout.split("\n").filter((l) => l.startsWith("::"))).toHaveLength(30);
-    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=161\n");
+    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=257\n");
     expect(readFileSync(env.GITHUB_STEP_SUMMARY, "utf8")).toContain(
-      "Annotations on this run show 30 of 161",
+      "Annotations on this run show 30 of 257",
     );
   });
 });

@@ -6,11 +6,25 @@ is a semver tag and nothing more.
 ## After a pbiplint CLI release
 
 1. On a branch, change the `pbiplint-version` default in `action.yml` to the new version and the
-   `0.1.2` in README.md's inputs table to match.
-2. Run `npm test`, open a pull request, let CI pass. The dogfood jobs run the action on the
+   version in README.md's inputs table to match.
+2. Move the sample pin, the `ref` of the messy-sales checkout in `.github/workflows/ci.yml` and
+   `smoke.yml`, to the commit the main repository's release tag points at, so the dogfood and
+   smoke runs lint the sample that release shipped with.
+3. Move the version in CONTRIBUTING.md's fixture command to the new one, then regenerate
+   `test/fixtures/messy-sales.sarif` with that command from a checkout of the main repository at
+   the same commit. Move the tests' pins to what the new file holds: the counts, the outputs line,
+   and the first annotation's file, line, and title. Nothing fails on a stale fixture, since the
+   unit tests read the committed file and the dogfood checks pin no count, so this step is easy to
+   miss.
+4. Run `npm test`, open a pull request, let CI pass. The dogfood jobs run the action on the
    messy-sales example with the new version.
-3. Merge, then release as below. A CLI patch is a patch here; a CLI minor that adds rules or
+5. Merge, then release as below. A CLI patch is a patch here; a CLI minor that adds rules or
    changes output is a minor here.
+
+When the sample at the new pin needs the new CLI, as 0.2.0's did (its `pbiplint.config.json` sets
+a rule option the older CLI refuses), do not run the Smoke workflow between the merge and the tag.
+It runs the released `pbiplint/action@v1`, whose older CLI exits 2 on that sample. Run it once the
+new tag is out, as `smoke.yml` asks.
 
 ## Every release
 
