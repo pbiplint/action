@@ -48,7 +48,7 @@ outputs:
   exit-code:
     description: >-
       pbiplint's exit code: 0 no findings at or above fail-on, 1 findings at or above fail-on,
-      2 usage or input error.
+      2 usage or input error, or pbiplint could not run.
     value: ${{ steps.lint.outputs.exit-code }}
   sarif-file:
     description: Path of the SARIF report.
@@ -91,7 +91,11 @@ runs:
         npx --yes "pbiplint@$PBIPLINT_VERSION" "${args[@]}" --format sarif --output "$sarif"
         code=$?
         set -e
-        # The same run again as Markdown for the job summary. A usage error would only repeat.
+        # pbiplint writes the SARIF file on every run it completes, so a non-zero exit with none
+        # means it could not run, for example because npx could not install the version asked for.
+        if [ "$code" -ne 0 ] && [ ! -s "$sarif" ]; then code=2; fi
+        # The same run again as Markdown for the job summary. A usage error, or a run that could
+        # not start, would only repeat.
         if [ "$code" -ne 2 ]; then
           npx --yes "pbiplint@$PBIPLINT_VERSION" "${args[@]}" --format markdown --output "$markdown" || true
         fi

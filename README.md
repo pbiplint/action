@@ -60,14 +60,14 @@ https://pbiplint.com/rules with what it checks, why, and how to fix it. Configur
 
 ## Outputs
 
-| Output       | What it holds                                                                                                              |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `exit-code`  | pbiplint's exit code: `0` no findings at or above `fail-on`, `1` findings at or above `fail-on`, `2` usage or input error. |
-| `sarif-file` | Path of the SARIF report, for an upload-artifact step or your own tooling.                                                 |
-| `findings`   | Number of findings.                                                                                                        |
-| `errors`     | Number of error findings.                                                                                                  |
-| `warnings`   | Number of warning findings.                                                                                                |
-| `infos`      | Number of info findings.                                                                                                   |
+| Output       | What it holds                                                                                                                                         |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `exit-code`  | pbiplint's exit code: `0` no findings at or above `fail-on`, `1` findings at or above `fail-on`, `2` usage or input error, or pbiplint could not run. |
+| `sarif-file` | Path of the SARIF report, for an upload-artifact step or your own tooling.                                                                            |
+| `findings`   | Number of findings.                                                                                                                                   |
+| `errors`     | Number of error findings.                                                                                                                             |
+| `warnings`   | Number of warning findings.                                                                                                                           |
+| `infos`      | Number of info findings.                                                                                                                              |
 
 ## Code scanning
 

@@ -26,10 +26,11 @@ jobs:
       - run: npm test
 
   # The action run on itself against the messy-sales example project, its model and its report,
-  # from the main repository, pinned to a commit so the counts cannot drift under us. Once
-  # reporting without failing, which must pass and must reach code scanning, and once with the
-  # default gate, which must fail with exit code 1. Windows too, since Power BI shops run Windows
-  # runners.
+  # from the main repository, pinned to a commit so the sample under these checks cannot change
+  # under us. Once asking for a CLI version npm does not have, which must fail with exit code 2;
+  # once reporting without failing, which must pass and must reach code scanning; and once with
+  # the default gate, which must fail with exit code 1. Windows too, since Power BI shops run
+  # Windows runners.
   dogfood:
     name: dogfood (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -51,6 +52,16 @@ jobs:
           path: sample
           sparse-checkout: examples/messy-sales
           persist-credentials: false
+      # First, since every run of the action replaces the one SARIF file in RUNNER_TEMP, and this
+      # one leaves none.
+      - name: Ask for a version that does not exist
+        id: missing
+        uses: ./
+        continue-on-error: true
+        with:
+          path: sample/examples/messy-sales
+          pbiplint-version: 0.0.0-not-published
+          upload-sarif: false
       - name: Report without failing
         id: report
         uses: ./
@@ -65,9 +76,11 @@ jobs:
         with:
           path: sample/examples/messy-sales
           upload-sarif: false
-      - name: Check both outcomes
+      - name: Check the three outcomes
         shell: bash
         env:
+          MISSING_OUTCOME: ${{ steps.missing.outcome }}
+          MISSING_EXIT: ${{ steps.missing.outputs.exit-code }}
           REPORT_EXIT: ${{ steps.report.outputs.exit-code }}
           REPORT_SARIF: ${{ steps.report.outputs.sarif-file }}
           FINDINGS: ${{ steps.report.outputs.findings }}
@@ -77,6 +90,7 @@ jobs:
           GATE_OUTCOME: ${{ steps.gate.outcome }}
           GATE_EXIT: ${{ steps.gate.outputs.exit-code }}
         run: |
+          echo "missing version: $MISSING_OUTCOME, exit $MISSING_EXIT"
           echo "report: exit $REPORT_EXIT, $FINDINGS findings ($ERRORS errors, $WARNINGS warnings, $INFOS info), $REPORT_SARIF"
           echo "gate: $GATE_OUTCOME, exit $GATE_EXIT"
           test "$REPORT_EXIT" = "0"
@@ -85,3 +99,5 @@ jobs:
           test "$FINDINGS" -eq $((ERRORS + WARNINGS + INFOS))
           test "$GATE_OUTCOME" = "failure"
           test "$GATE_EXIT" = "1"
+          test "$MISSING_OUTCOME" = "failure"
+          test "$MISSING_EXIT" = "2"
