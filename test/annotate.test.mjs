@@ -44,7 +44,7 @@ function result(level, text, uri, line) {
  * A finding whose rule name and message carry an escape sequence, a right-to-left override, a
  * newline, a tab, and a carriage return, as a hostile repository could name a measure.
  */
-const HOSTILE_NAME = "Hidden\u001b[8m rule\u202e";
+const HOSTILE_NAME = "Hidden\u001b[8m\n\trule\u202e";
 const HOSTILE = sarif(
   [{ ...RULE, name: HOSTILE_NAME }],
   [result("error", `[Sales\u001b[2J\u202e\n\tTotal]: ${HOSTILE_NAME} (a\r\nb)`, "a.tmdl", 1)],
@@ -172,7 +172,7 @@ describe("annotations", () => {
       level: "error",
       file: "a.tmdl",
       line: 1,
-      title: "Hidden\\u001b[8m rule\\u202e",
+      title: "Hidden\\u001b[8m\\u000a\\u0009rule\\u202e",
       message:
         "[Sales\\u001b[2J\\u202e\\u000a\\u0009Total] (a\\u000d\\u000ab). Rule PROVIDE_FORMAT_STRING_FOR_MEASURES: https://pbiplint.com/rules/provide-format-string-for-measures",
     });
@@ -263,7 +263,7 @@ describe("workflowCommand", () => {
     const command = workflowCommand(annotations(HOSTILE)[0]);
     expect(command).not.toMatch(RAW_CONTROL);
     expect(command).toBe(
-      "::error file=a.tmdl,line=1,title=Hidden\\u001b[8m rule\\u202e::[Sales\\u001b[2J\\u202e\\u000a\\u0009Total] (a\\u000d\\u000ab). Rule PROVIDE_FORMAT_STRING_FOR_MEASURES: https://pbiplint.com/rules/provide-format-string-for-measures",
+      "::error file=a.tmdl,line=1,title=Hidden\\u001b[8m\\u000a\\u0009rule\\u202e::[Sales\\u001b[2J\\u202e\\u000a\\u0009Total] (a\\u000d\\u000ab). Rule PROVIDE_FORMAT_STRING_FOR_MEASURES: https://pbiplint.com/rules/provide-format-string-for-measures",
     );
   });
 });
