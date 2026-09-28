@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, test } from "vitest";
+import { describe, expect, onTestFinished, test } from "vitest";
 import { annotations, countFindings, showControls, workflowCommand } from "../src/annotate.mjs";
 
 const fixture = JSON.parse(
@@ -268,10 +268,17 @@ describe("workflowCommand", () => {
   });
 });
 
-import { mkdtempSync, writeFileSync, existsSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { main, outputs, summary, SUMMARY_LIMIT } from "../src/annotate.mjs";
+
+/** A new folder for one test, removed when that test finishes, whether it passed or failed. */
+function tempDir() {
+  const dir = mkdtempSync(join(tmpdir(), "pbiplint-action-"));
+  onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
 
 const COUNTS = { findings: 257, errors: 19, warnings: 78, infos: 160 };
 
@@ -331,7 +338,7 @@ describe("summary", () => {
 
 describe("main", () => {
   function setup() {
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-action-"));
+    const dir = tempDir();
     const env = { GITHUB_OUTPUT: join(dir, "output"), GITHUB_STEP_SUMMARY: join(dir, "summary") };
     writeFileSync(env.GITHUB_OUTPUT, "exit-code=1\n");
     writeFileSync(env.GITHUB_STEP_SUMMARY, "");
@@ -399,7 +406,7 @@ import { spawnSync } from "node:child_process";
 
 describe("command line", () => {
   test("runs from the arguments the action passes", () => {
-    const dir = mkdtempSync(join(tmpdir(), "pbiplint-action-"));
+    const dir = tempDir();
     const env = {
       ...process.env,
       GITHUB_OUTPUT: join(dir, "output"),
