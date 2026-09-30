@@ -26,7 +26,7 @@ inputs:
     default: ""
   pbiplint-version:
     description: The pbiplint CLI version to run, as an npm version spec.
-    default: "0.2.1"
+    default: "0.2.2"
   annotations:
     description: >-
       Annotate findings on the run and on changed lines in the pull request (true or false).
