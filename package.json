@@ -1,6 +1,6 @@
 {
   "name": "pbiplint-action",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "GitHub Action for pbiplint: lint Power BI projects on every pull request, with annotations, a job summary, and code scanning upload.",
   "license": "MIT",

@@ -52,7 +52,7 @@ const HOSTILE = sarif(
 
 describe("countFindings", () => {
   test("counts every result by level", () => {
-    expect(countFindings(fixture)).toEqual({ findings: 257, errors: 19, warnings: 78, infos: 160 });
+    expect(countFindings(fixture)).toEqual({ findings: 256, errors: 19, warnings: 77, infos: 160 });
   });
 
   test("an empty run counts to zero", () => {
@@ -280,11 +280,11 @@ function tempDir() {
   return dir;
 }
 
-const COUNTS = { findings: 257, errors: 19, warnings: 78, infos: 160 };
+const COUNTS = { findings: 256, errors: 19, warnings: 77, infos: 160 };
 
 describe("outputs", () => {
   test("writes one name=value line per count", () => {
-    expect(outputs(COUNTS)).toBe("findings=257\nerrors=19\nwarnings=78\ninfos=160\n");
+    expect(outputs(COUNTS)).toBe("findings=256\nerrors=19\nwarnings=77\ninfos=160\n");
   });
 });
 
@@ -296,7 +296,7 @@ describe("summary", () => {
       annotated: 30,
     });
     expect(text).toBe(
-      "# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 257 findings, the first 10 of each severity. The full list is above.\n",
+      "# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 256 findings, the first 10 of each severity. The full list is above.\n",
     );
   });
 
@@ -358,10 +358,10 @@ describe("main", () => {
       /^::error file=examples\/messy-sales\/Messy Sales Demo\.Report\/definition\/pages\/3cea48e58036b1654474\/visuals\/6500e9c3f9d74f2958c7\/visual\.json,line=272,title=Action points at nothing::/,
     );
     expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toBe(
-      "exit-code=1\nfindings=257\nerrors=19\nwarnings=78\ninfos=160\n",
+      "exit-code=1\nfindings=256\nerrors=19\nwarnings=77\ninfos=160\n",
     );
     expect(readFileSync(env.GITHUB_STEP_SUMMARY, "utf8")).toMatch(
-      /^# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 257 findings/,
+      /^# pbiplint report\n\nbody\n\nAnnotations on this run show 30 of 256 findings/,
     );
   });
 
@@ -378,7 +378,7 @@ describe("main", () => {
       stdout,
     });
     expect(lines).toHaveLength(0);
-    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=257\n");
+    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=256\n");
   });
 
   test("copes with a run that produced no report", () => {
@@ -435,9 +435,9 @@ describe("command line", () => {
     );
     expect(r.status).toBe(0);
     expect(r.stdout.split("\n").filter((l) => l.startsWith("::"))).toHaveLength(30);
-    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=257\n");
+    expect(readFileSync(env.GITHUB_OUTPUT, "utf8")).toContain("findings=256\n");
     expect(readFileSync(env.GITHUB_STEP_SUMMARY, "utf8")).toContain(
-      "Annotations on this run show 30 of 257",
+      "Annotations on this run show 30 of 256",
     );
   });
 });

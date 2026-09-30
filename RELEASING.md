@@ -12,14 +12,17 @@ is a semver tag and nothing more.
    smoke runs lint the sample that release shipped with.
 3. Move the version in CONTRIBUTING.md's fixture command to the new one, then regenerate
    `test/fixtures/messy-sales.sarif` with that command from a checkout of the main repository at
-   the same commit. Move the tests' pins to what the new file holds: the counts, the outputs line,
-   and the first annotation's file, line, and title. Nothing fails on a stale fixture, since the
-   unit tests read the committed file and the dogfood checks pin no count, so this step is easy to
-   miss.
+   the same commit. Move the tests' pins to what the new file holds: the counts everywhere they
+   appear (`countFindings`, `COUNTS`, every `findings=` outputs line, and the summary's "30 of N
+   findings"), and the first annotation's file, line, and title. Nothing fails on a stale fixture,
+   since the unit tests read the committed file and the dogfood checks pin no count, so this step is
+   easy to miss.
 4. Run `npm test`, open a pull request, let CI pass. The dogfood jobs run the action on the
    messy-sales example with the new version.
-5. Merge, then release as below. A CLI patch is a patch here; a CLI minor that adds rules or
-   changes output is a minor here.
+5. Merge, then release as below. Number the release by what the CLI release does, not by its own
+   number: one that adds rules or changes the findings an unchanged project gets is a minor here,
+   since a workflow gated with `fail-on` can start failing when `v1` moves; any other is a patch.
+   CLI 0.2.1 was numbered a patch but added a rule, so it made 1.2.0.
 
 When the sample at the new pin needs the new CLI, as 0.2.0's did (its `pbiplint.config.json` sets
 a rule option the older CLI refuses), do not run the Smoke workflow between the merge and the tag.
