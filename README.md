@@ -41,9 +41,10 @@ jobs:
 
 The rules are the ones pbiplint runs everywhere. The semantic model is checked against Microsoft's
 best-practice ruleset, ported and verified, and pbiplint's own rules for a year or a date fixed in
-DAX and for DAX user-defined functions. The report, in the PBIR format, is checked against the
-11 base rules of PBI Inspector, ported, and pbiplint's own rules for a report's correctness and
-readiness and for the model objects the report never reaches. Every rule has a page at
+DAX, for DAX user-defined functions, for translations, and for decimal columns' format strings. The
+report, in the PBIR format, is checked against the 11 base rules of PBI Inspector, ported, and
+pbiplint's own rules for a report's correctness and readiness and for the model objects the report
+never reaches. Every rule has a page at
 https://pbiplint.com/rules with what it checks, why, and how to fix it. Configure rules with a
 `pbiplint.config.json` next to your project, as on the command line; the action picks it up.
 
@@ -54,7 +55,7 @@ https://pbiplint.com/rules with what it checks, why, and how to fix it. Configur
 | `path`             | `.`        | What to lint, relative to the workspace: a PBIP folder, a `.pbip` file, a `.SemanticModel` or `.Report` folder, a `definition` folder, or one `.tmdl` file. |
 | `fail-on`          | `error`    | Lowest severity that fails the step: `error`, `warning`, `info`, or `none`.                                                                                 |
 | `config`           |            | A `pbiplint.config.json` to use. By default the nearest one above the project applies.                                                                      |
-| `pbiplint-version` | `0.2.2`    | The pbiplint CLI version to run. Each release of this action pins the current one; override to try a newer CLI early.                                       |
+| `pbiplint-version` | `0.2.3`    | The pbiplint CLI version to run. Each release of this action pins the current one; override to try a newer CLI early.                                       |
 | `annotations`      | `true`     | Annotate findings on the run and the pull request.                                                                                                          |
 | `upload-sarif`     | `true`     | Upload the SARIF report to code scanning. When the upload fails, the step notes why and carries on.                                                         |
 | `sarif-category`   | `pbiplint` | The code scanning category of the upload. Give each step its own when one workflow lints several projects.                                                  |

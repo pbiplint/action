@@ -12,7 +12,7 @@ repository's `examples/messy-sales` at the pinned version. Regenerate it from a 
 https://github.com/pbiplint/pbiplint when the CLI's output changes:
 
 ```bash
-npx pbiplint@0.2.2 examples/messy-sales --format sarif --output ../pbiplint-action/test/fixtures/messy-sales.sarif
+npx pbiplint@0.2.3 examples/messy-sales --format sarif --output ../pbiplint-action/test/fixtures/messy-sales.sarif
 ```
 
 There is no way to run a composite action locally, so CI runs the action on itself against the
