@@ -83,14 +83,19 @@ runs:
       run: |
         sarif="$RUNNER_TEMP/pbiplint.sarif"
         markdown="$RUNNER_TEMP/pbiplint.md"
-        rm -f "$sarif" "$markdown"
+        err="$RUNNER_TEMP/pbiplint.err"
+        rm -f "$sarif" "$markdown" "$err"
         args=("$PBIPLINT_PATH" --fail-on "$PBIPLINT_FAIL_ON")
         if [ -n "$PBIPLINT_CONFIG" ]; then args+=(--config "$PBIPLINT_CONFIG"); fi
         # The exit code is the verdict; the last step exits with it once the report is out.
+        # What pbiplint says on stderr is kept for the job summary of a run that produced no report,
+        # then copied to the log. Written to a file rather than through a process substitution,
+        # which bash does not wait for, so the file is whole before the next step reads it.
         set +e
-        npx --yes "pbiplint@$PBIPLINT_VERSION" "${args[@]}" --format sarif --output "$sarif"
+        npx --yes "pbiplint@$PBIPLINT_VERSION" "${args[@]}" --format sarif --output "$sarif" 2>"$err"
         code=$?
         set -e
+        cat "$err" >&2
         # pbiplint writes the SARIF file on every run it completes, so a non-zero exit with none
         # means it could not run, for example because npx could not install the version asked for.
         if [ "$code" -ne 0 ] && [ ! -s "$sarif" ]; then code=2; fi
@@ -118,6 +123,7 @@ runs:
         node "$GITHUB_ACTION_PATH/src/annotate.mjs"
         --sarif "$PBIPLINT_SARIF"
         --markdown "$RUNNER_TEMP/pbiplint.md"
+        --stderr "$RUNNER_TEMP/pbiplint.err"
         --annotations "$PBIPLINT_ANNOTATIONS"
         --exit-code "$PBIPLINT_EXIT"
 

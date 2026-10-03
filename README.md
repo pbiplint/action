@@ -36,7 +36,8 @@ jobs:
   rest are in the summary.
 - **Writes the full report to the job summary**, ranked, with a link to each rule's page. When the
   project has a report, the summary's "Report at a glance" says what the report will do when
-  someone opens it, whether or not anything fired.
+  someone opens it, whether or not anything fired. When pbiplint produces no report, for example
+  because it could read nothing at `path`, the summary gives pbiplint's reason instead.
 - **Uploads a SARIF report to code scanning**, where findings persist as alerts under the
   Security tab and show as new or fixed on later pull requests.
 

@@ -62,6 +62,23 @@ jobs:
           path: sample/examples/messy-sales
           pbiplint-version: 0.0.0-not-published
           upload-sarif: false
+      # The reason a run that produced no report gives is kept for the job summary, which a later
+      # step cannot read, so the file it is written from is checked straight after.
+      - name: Point at a path that does not exist
+        id: nowhere
+        uses: ./
+        continue-on-error: true
+        with:
+          path: sample/examples/not-there
+          upload-sarif: false
+      - name: Check the reason was kept for the summary
+        shell: bash
+        env:
+          NOWHERE_EXIT: ${{ steps.nowhere.outputs.exit-code }}
+        run: |
+          cat "$RUNNER_TEMP/pbiplint.err"
+          test "$NOWHERE_EXIT" = "2"
+          grep -q "sample/examples/not-there does not exist" "$RUNNER_TEMP/pbiplint.err"
       - name: Report without failing
         id: report
         uses: ./

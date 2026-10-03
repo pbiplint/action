@@ -88,9 +88,38 @@ export function outputs(counts) {
 /** A job summary holds 1 MiB; this leaves headroom for the footer and multi-byte characters. */
 export const SUMMARY_LIMIT = 1_000_000;
 
-export function summary({ markdown, counts, annotated, annotate = true, exitCode = 0 }) {
-  if (markdown === undefined)
-    return `## pbiplint\n\npbiplint did not produce a report (exit code ${exitCode}). See the lint step's log for the error.\n`;
+/** How many lines of what pbiplint said the summary of a run with no report shows. */
+export const STDERR_LINES = 20;
+
+/**
+ * What pbiplint wrote to stderr, for the summary of a run that produced no report: its lines in a
+ * fence longer than any run of backquotes in them, so nothing in a path or a name is read as
+ * Markdown, each with its control characters shown. The usage hint pbiplint ends a refusal with
+ * is about the command line, not the action, so it is left out.
+ */
+function said(stderr) {
+  const lines = (stderr ?? "")
+    .split(/\r?\n/)
+    .filter((l) => l.trim() !== "" && l !== "Run pbiplint --help for usage.")
+    .map(showControls);
+  if (lines.length === 0) return undefined;
+  const shown = lines.slice(0, STDERR_LINES);
+  const longest = Math.max(
+    0,
+    ...shown.map((l) => Math.max(0, ...(l.match(/`+/g) ?? []).map((b) => b.length))),
+  );
+  const fence = "`".repeat(Math.max(3, longest + 1));
+  const rest = lines.length > shown.length ? "\nThe rest is in the lint step's log.\n" : "";
+  return `${fence}text\n${shown.join("\n")}\n${fence}\n${rest}`;
+}
+
+export function summary({ markdown, counts, annotated, annotate = true, exitCode = 0, stderr }) {
+  if (markdown === undefined) {
+    const words = said(stderr);
+    return words === undefined
+      ? `## pbiplint\n\npbiplint did not produce a report (exit code ${exitCode}). See the lint step's log for the error.\n`
+      : `## pbiplint\n\npbiplint did not produce a report (exit code ${exitCode}). It said:\n\n${words}`;
+  }
   const footer =
     annotate && annotated < counts.findings
       ? `\nAnnotations on this run show ${annotated} of ${counts.findings} findings, the first ${ANNOTATION_CAP} of each severity. The full list is above.\n`
@@ -104,9 +133,13 @@ export function summary({ markdown, counts, annotated, annotate = true, exitCode
   return body + footer;
 }
 
-export function main({ sarifPath, markdownPath, annotate, exitCode, env, stdout }) {
+export function main({ sarifPath, markdownPath, stderrPath, annotate, exitCode, env, stdout }) {
   const sarif = existsSync(sarifPath) ? JSON.parse(readFileSync(sarifPath, "utf8")) : undefined;
   const markdown = existsSync(markdownPath) ? readFileSync(markdownPath, "utf8") : undefined;
+  const stderr =
+    stderrPath !== undefined && existsSync(stderrPath)
+      ? readFileSync(stderrPath, "utf8")
+      : undefined;
   const counts = sarif ? countFindings(sarif) : { findings: 0, errors: 0, warnings: 0, infos: 0 };
   const list = sarif && annotate ? annotations(sarif) : [];
   for (const a of list) stdout(workflowCommand(a));
@@ -114,11 +147,12 @@ export function main({ sarifPath, markdownPath, annotate, exitCode, env, stdout 
   if (env.GITHUB_STEP_SUMMARY)
     appendFileSync(
       env.GITHUB_STEP_SUMMARY,
-      summary({ markdown, counts, annotated: list.length, annotate, exitCode }),
+      summary({ markdown, counts, annotated: list.length, annotate, exitCode, stderr }),
     );
 }
 
-// node src/annotate.mjs --sarif <file> --markdown <file> --annotations true|false --exit-code <n>
+// node src/annotate.mjs --sarif <file> --markdown <file> [--stderr <file>] --annotations true|false
+//   --exit-code <n>
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const arg = (name) => {
     const i = process.argv.indexOf(`--${name}`);
@@ -127,6 +161,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   main({
     sarifPath: arg("sarif"),
     markdownPath: arg("markdown"),
+    stderrPath: arg("stderr"),
     annotate: arg("annotations") !== "false",
     exitCode: Number(arg("exit-code") ?? 0),
     env: process.env,
