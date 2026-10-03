@@ -84,7 +84,15 @@ runs:
         sarif="$RUNNER_TEMP/pbiplint.sarif"
         markdown="$RUNNER_TEMP/pbiplint.md"
         err="$RUNNER_TEMP/pbiplint.err"
-        rm -f "$sarif" "$markdown" "$err"
+        rm -f "$sarif" "$markdown" "$err" "$RUNNER_TEMP/pbiplint-markdown.err"
+        # pbiplint's stderr reaches the log through src/log-safe.mjs, which escapes CI log command
+        # sequences, whichever pbiplint version runs.
+        # Should node fail, the step goes on with pbiplint's exit code, and says why the log is short;
+        # the messages are not copied as written.
+        to_log() {
+          node "$GITHUB_ACTION_PATH/src/log-safe.mjs" < "$1" >&2 ||
+            echo "pbiplint-action: could not copy pbiplint's messages to the log" >&2
+        }
         args=("$PBIPLINT_PATH" --fail-on "$PBIPLINT_FAIL_ON")
         if [ -n "$PBIPLINT_CONFIG" ]; then args+=(--config "$PBIPLINT_CONFIG"); fi
         # The exit code is the verdict; the last step exits with it once the report is out.
@@ -95,14 +103,16 @@ runs:
         npx --yes "pbiplint@$PBIPLINT_VERSION" "${args[@]}" --format sarif --output "$sarif" 2>"$err"
         code=$?
         set -e
-        cat "$err" >&2
+        to_log "$err"
         # pbiplint writes the SARIF file on every run it completes, so a non-zero exit with none
         # means it could not run, for example because npx could not install the version asked for.
         if [ "$code" -ne 0 ] && [ ! -s "$sarif" ]; then code=2; fi
         # The same run again as Markdown for the job summary. A usage error, or a run that could
         # not start, would only repeat.
         if [ "$code" -ne 2 ]; then
-          npx --yes "pbiplint@$PBIPLINT_VERSION" "${args[@]}" --format markdown --output "$markdown" || true
+          npx --yes "pbiplint@$PBIPLINT_VERSION" "${args[@]}" --format markdown --output "$markdown" \
+            2>"$RUNNER_TEMP/pbiplint-markdown.err" || true
+          to_log "$RUNNER_TEMP/pbiplint-markdown.err"
         fi
         upload=false
         if [ "$PBIPLINT_UPLOAD" = "true" ] && [ -s "$sarif" ]; then upload=true; fi
