@@ -322,6 +322,37 @@ describe("summary", () => {
     ).toBe(true);
   });
 
+  test("gives pbiplint's own words for a missing report, without the usage hint", () => {
+    const legacy =
+      "pbiplint: /w/Demo.Report is stored as a single report.json (PBIR-Legacy), which pbiplint cannot read. See Microsoft Learn: https://learn.microsoft.com/x";
+    expect(
+      summary({
+        markdown: undefined,
+        counts: { findings: 0, errors: 0, warnings: 0, infos: 0 },
+        annotated: 0,
+        exitCode: 2,
+        stderr: `${legacy}\nsecond line\nRun pbiplint --help for usage.\n`,
+      }),
+    ).toBe(
+      `## pbiplint\n\npbiplint did not produce a report (exit code 2). It said:\n\n\`\`\`text\n${legacy}\nsecond line\n\`\`\`\n`,
+    );
+  });
+
+  test("fences pbiplint's words so nothing in them is read as Markdown, and keeps the first 20 lines", () => {
+    const lines = ["pbiplint: a ```` b", ...Array.from({ length: 30 }, (_, i) => `line ${i}`)];
+    const text = summary({
+      markdown: undefined,
+      counts: { findings: 0, errors: 0, warnings: 0, infos: 0 },
+      annotated: 0,
+      exitCode: 2,
+      stderr: lines.join("\n"),
+    });
+    expect(text).toContain("\n`````text\npbiplint: a ```` b\n");
+    expect(text).toContain("\nline 18\n`````\n");
+    expect(text).not.toContain("line 19");
+    expect(text.endsWith("The rest is in the lint step's log.\n")).toBe(true);
+  });
+
   test("explains a missing report", () => {
     expect(
       summary({
@@ -387,6 +418,7 @@ describe("main", () => {
       sarifPath: join(dir, "none.sarif"),
       markdownPath: join(dir, "none.md"),
       annotate: true,
+      stderrPath: join(dir, "none.err"),
       exitCode: 2,
       env,
       stdout,
@@ -399,6 +431,28 @@ describe("main", () => {
       "did not produce a report (exit code 2)",
     );
     expect(existsSync(join(dir, "none.sarif"))).toBe(false);
+  });
+});
+
+describe("main, given what pbiplint said", () => {
+  test("puts pbiplint's error in the summary of a run that produced no report", () => {
+    const dir = tempDir();
+    const env = { GITHUB_OUTPUT: join(dir, "output"), GITHUB_STEP_SUMMARY: join(dir, "summary") };
+    writeFileSync(env.GITHUB_STEP_SUMMARY, "");
+    const stderrPath = join(dir, "pbiplint.err");
+    writeFileSync(stderrPath, "pbiplint: nothing to read\nRun pbiplint --help for usage.\n");
+    main({
+      sarifPath: join(dir, "none.sarif"),
+      markdownPath: join(dir, "none.md"),
+      stderrPath,
+      annotate: true,
+      exitCode: 2,
+      env,
+      stdout: () => {},
+    });
+    expect(readFileSync(env.GITHUB_STEP_SUMMARY, "utf8")).toBe(
+      "## pbiplint\n\npbiplint did not produce a report (exit code 2). It said:\n\n```text\npbiplint: nothing to read\n```\n",
+    );
   });
 });
 
