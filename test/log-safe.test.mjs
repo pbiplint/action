@@ -1,4 +1,7 @@
 import { spawnSync } from "node:child_process";
+import { copyFileSync, mkdirSync, mkdtempSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 import { logSafe } from "../src/log-safe.mjs";
 
@@ -31,5 +34,18 @@ describe("logSafe", () => {
     });
     expect(r.status).toBe(0);
     expect(r.stdout).toBe("pbiplint: a #\\u0023[warning]b\n  \\u003a:error::c\n");
+  });
+  test("runs as a script by a path through a symbolic link, and turns CRLF lines alike", () => {
+    const dir = mkdtempSync(join(tmpdir(), "log-safe-"));
+    const real = join(dir, "real");
+    mkdirSync(real);
+    copyFileSync(new URL("../src/log-safe.mjs", import.meta.url), join(real, "log-safe.mjs"));
+    symlinkSync(real, join(dir, "linked"));
+    const r = spawnSync(process.execPath, [join(dir, "linked", "log-safe.mjs")], {
+      input: "a ##[warning]b\r\n::error::c\r\n",
+      encoding: "utf8",
+    });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toBe("a #\\u0023[warning]b\r\n\\u003a:error::c\r\n");
   });
 });

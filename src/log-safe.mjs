@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 // pbiplint's stderr, before the action copies it to the log, with CI log command sequences
@@ -14,5 +14,6 @@ export const logSafe = (text) =>
     .replace(/^((?:[^\S\n]|\u0085)*):(?=:)/gm, "$1\\u003a");
 
 // node src/log-safe.mjs < pbiplint.err >&2
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href)
+// Node resolves the module's own URL through symbolic links, so the path it was run by is too.
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href)
   process.stdout.write(logSafe(readFileSync(0, "utf8")));

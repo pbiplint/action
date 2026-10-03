@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readFileSync, realpathSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 
 // Turns a pbiplint SARIF file into GitHub workflow annotations, count outputs, and a job summary.
@@ -153,7 +153,8 @@ export function main({ sarifPath, markdownPath, stderrPath, annotate, exitCode, 
 
 // node src/annotate.mjs --sarif <file> --markdown <file> [--stderr <file>] --annotations true|false
 //   --exit-code <n>
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Node resolves the module's own URL through symbolic links, so the path it was run by is too.
+if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
   const arg = (name) => {
     const i = process.argv.indexOf(`--${name}`);
     return i === -1 ? undefined : process.argv[i + 1];

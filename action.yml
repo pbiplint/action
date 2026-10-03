@@ -87,7 +87,12 @@ runs:
         rm -f "$sarif" "$markdown" "$err" "$RUNNER_TEMP/pbiplint-markdown.err"
         # pbiplint's stderr reaches the log through src/log-safe.mjs, which escapes CI log command
         # sequences, whichever pbiplint version runs.
-        to_log() { node "$GITHUB_ACTION_PATH/src/log-safe.mjs" < "$1" >&2; }
+        # Should node fail, the step goes on with pbiplint's exit code, and says why the log is short;
+        # the messages are not copied as written.
+        to_log() {
+          node "$GITHUB_ACTION_PATH/src/log-safe.mjs" < "$1" >&2 ||
+            echo "pbiplint-action: could not copy pbiplint's messages to the log" >&2
+        }
         args=("$PBIPLINT_PATH" --fail-on "$PBIPLINT_FAIL_ON")
         if [ -n "$PBIPLINT_CONFIG" ]; then args+=(--config "$PBIPLINT_CONFIG"); fi
         # The exit code is the verdict; the last step exits with it once the report is out.
