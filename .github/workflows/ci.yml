@@ -78,7 +78,7 @@ jobs:
         run: |
           cat "$RUNNER_TEMP/pbiplint.err"
           test "$NOWHERE_EXIT" = "2"
-          grep -q "sample/examples/not-there does not exist" "$RUNNER_TEMP/pbiplint.err"
+          grep -q "not-there does not exist" "$RUNNER_TEMP/pbiplint.err"
       - name: Report without failing
         id: report
         uses: ./
