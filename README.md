@@ -3,7 +3,8 @@
 Lint Power BI projects on every pull request. One step in your workflow runs
 [pbiplint](https://pbiplint.com) against the project in your repository, its semantic model and its
 report, and turns the findings into a pass/fail check, annotations on the changed lines, a readable
-job summary, and code scanning alerts. Nothing leaves GitHub.
+job summary, and code scanning alerts. Nothing leaves GitHub, as
+[the pbiplint Privacy Promise](https://pbiplint.com/privacy/#in-the-github-action) says.
 
 ```yaml
 name: Lint Power BI
