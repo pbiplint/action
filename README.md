@@ -59,7 +59,7 @@ https://pbiplint.com/rules with what it checks, why, and how to fix it. Configur
 | `path`             | `.`        | What to lint, relative to the workspace: a PBIP folder, a `.pbip` file, a `.SemanticModel` or `.Report` folder, a `definition` folder, or one `.tmdl` file. |
 | `fail-on`          | `error`    | Lowest severity that fails the step: `error`, `warning`, `info`, or `none`.                                                                                 |
 | `config`           |            | A `pbiplint.config.json` to use. By default the nearest one above the project applies.                                                                      |
-| `pbiplint-version` | `0.2.4`    | The pbiplint CLI version to run. Each release of this action pins the current one; override to try a newer CLI early.                                       |
+| `pbiplint-version` | `0.2.5`    | The pbiplint CLI version to run. Each release of this action pins the current one; override to try a newer CLI early.                                       |
 | `annotations`      | `true`     | Annotate findings on the run and the pull request.                                                                                                          |
 | `upload-sarif`     | `true`     | Upload the SARIF report to code scanning. When the upload fails, the step notes why and carries on.                                                         |
 | `sarif-category`   | `pbiplint` | The code scanning category of the upload. Give each step its own when one workflow lints several projects.                                                  |
@@ -102,9 +102,10 @@ One step per project. Point `path` at each and, if you upload, give each its own
 
 A `.pbip` file names its report, and the report names its model, so two projects saved in one
 folder lint apart. A repository whose top level is the project folder, with the `.SemanticModel`
-and `.Report` folders in it, needs no `path` at all. For a project in a subfolder, set `path`: from
-the top, pbiplint finds only the model's `.tmdl` files and leaves the report out, and the project's
-`pbiplint.config.json` with it.
+and `.Report` folders in it, needs no `path` at all, and neither does one with a single project in a
+subfolder: pbiplint finds it, lints its model and its report with its `pbiplint.config.json`, and
+says so in a notice. A repository with several projects fails the step and lists them, so give each
+its own step, as above.
 
 ## Runners
 
