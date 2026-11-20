@@ -49,14 +49,18 @@ The rules are the ones pbiplint runs everywhere. The semantic model is checked a
 best-practice ruleset, ported and verified, and pbiplint's own rules for a year or a date fixed in
 DAX, for DAX user-defined functions, for translations, and for decimal columns' format strings. The
 report, in the PBIR format, is checked against the 11 base rules of PBI Inspector, ported, and
-pbiplint's own rules for a report's correctness and readiness and for the model objects the report
-never reaches. The model's Power Query M is read with Microsoft's own parser and checked against 15
-rules of pbiplint's own, which makes 122 rules in all. Every rule has a page at
+pbiplint's own rules for a report's correctness and readiness, for text with too little contrast,
+and for the model objects the report never reaches. The model's Power Query M is read with
+Microsoft's own parser and checked against 15 rules of pbiplint's own, which makes 123 rules in all. Every rule has a page at
 https://pbiplint.com/rules with what it checks, why, and how to fix it. Configure rules with a
 `pbiplint.config.json` next to your project, as on the command line; the action picks it up.
 
-Version 1.8.0 of the action runs pbiplint 0.3.3. Next to 1.7.0, which ran pbiplint 0.3.0, a few
-findings change, each a fix, and a crafted Power Query query can no longer stall or end a run; the
+Version 1.9.0 of the action runs pbiplint 0.3.4. Next to 1.8.0, it adds a rule for report text
+with too little contrast (`LOW_TEXT_CONTRAST`), a warning, so it does not fail a step at the default
+`fail-on: error`; a theme file that `report.json` names and that does not parse is now a
+`PARSE_ISSUE` error, which does. The
+[0.3.4 release notes](https://github.com/pbiplint/pbiplint/releases/tag/v0.3.4) say more. Next to
+1.7.0, which ran pbiplint 0.3.0, a few findings also change, each a fix, and a crafted Power Query query can no longer stall or end a run; the
 [0.3.2](https://github.com/pbiplint/pbiplint/releases/tag/v0.3.2) and
 [0.3.3](https://github.com/pbiplint/pbiplint/releases/tag/v0.3.3) release notes list each change.
 Coming from 1.6.0 or earlier, which ran pbiplint 0.2.5, a step that passed can now fail at the
@@ -74,7 +78,7 @@ the older results while you fix what is new, set `pbiplint-version: 0.2.5`.
 | `path`             | `.`        | What to lint, relative to the workspace: a PBIP folder, a `.pbip` file, a `.SemanticModel` or `.Report` folder, a `definition` folder, or one `.tmdl` file. |
 | `fail-on`          | `error`    | Lowest severity that fails the step: `error`, `warning`, `info`, or `none`.                                                                                 |
 | `config`           |            | A `pbiplint.config.json` to use. By default the nearest one above the project applies.                                                                      |
-| `pbiplint-version` | `0.3.3`    | The pbiplint CLI version to run. Each release of this action pins the current one; override to try a newer CLI early.                                       |
+| `pbiplint-version` | `0.3.4`    | The pbiplint CLI version to run. Each release of this action pins the current one; override to try a newer CLI early.                                       |
 | `annotations`      | `true`     | Annotate findings on the run and the pull request.                                                                                                          |
 | `upload-sarif`     | `true`     | Upload the SARIF report to code scanning. When the upload fails, the step notes why and carries on.                                                         |
 | `sarif-category`   | `pbiplint` | The code scanning category of the upload. Give each step its own when one workflow has several pbiplint steps.                                              |
