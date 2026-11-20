@@ -55,13 +55,17 @@ rules of pbiplint's own, which makes 122 rules in all. Every rule has a page at
 https://pbiplint.com/rules with what it checks, why, and how to fix it. Configure rules with a
 `pbiplint.config.json` next to your project, as on the command line; the action picks it up.
 
-Version 1.7.0 of the action runs pbiplint 0.3.0, which can fail a step that passed under 0.2.5 at
-the default `fail-on: error`. Three of its new rules are errors (`DYNAMIC_DATA_SOURCE`,
+Version 1.8.0 of the action runs pbiplint 0.3.3. Next to 1.7.0, which ran pbiplint 0.3.0, a few
+findings change, each a fix, and a crafted Power Query query can no longer stall or end a run; the
+[0.3.2](https://github.com/pbiplint/pbiplint/releases/tag/v0.3.2) and
+[0.3.3](https://github.com/pbiplint/pbiplint/releases/tag/v0.3.3) release notes list each change.
+Coming from 1.6.0 or earlier, which ran pbiplint 0.2.5, a step that passed can now fail at the
+default `fail-on: error`. Three of 0.3.0's new rules are errors (`DYNAMIC_DATA_SOURCE`,
 `HARDCODED_SECRET_IN_QUERY`, and `INCREMENTAL_REFRESH_RANGE_BOUNDS`), and a rule that cannot finish
 is now an error as well. The
-[release notes](https://github.com/pbiplint/pbiplint/releases/tag/v0.3.0) say what else changes in
-a project's findings and how to try the three new errors on a project first. To keep the older
-results while you fix what is new, set `pbiplint-version: 0.2.5`.
+[0.3.0 release notes](https://github.com/pbiplint/pbiplint/releases/tag/v0.3.0) say what else
+changes in a project's findings and how to try the three new errors on a project first. To keep
+the older results while you fix what is new, set `pbiplint-version: 0.2.5`.
 
 ## Inputs
 
@@ -70,7 +74,7 @@ results while you fix what is new, set `pbiplint-version: 0.2.5`.
 | `path`             | `.`        | What to lint, relative to the workspace: a PBIP folder, a `.pbip` file, a `.SemanticModel` or `.Report` folder, a `definition` folder, or one `.tmdl` file. |
 | `fail-on`          | `error`    | Lowest severity that fails the step: `error`, `warning`, `info`, or `none`.                                                                                 |
 | `config`           |            | A `pbiplint.config.json` to use. By default the nearest one above the project applies.                                                                      |
-| `pbiplint-version` | `0.3.0`    | The pbiplint CLI version to run. Each release of this action pins the current one; override to try a newer CLI early.                                       |
+| `pbiplint-version` | `0.3.3`    | The pbiplint CLI version to run. Each release of this action pins the current one; override to try a newer CLI early.                                       |
 | `annotations`      | `true`     | Annotate findings on the run and the pull request.                                                                                                          |
 | `upload-sarif`     | `true`     | Upload the SARIF report to code scanning. When the upload fails, the step notes why and carries on.                                                         |
 | `sarif-category`   | `pbiplint` | The code scanning category of the upload. Give each step its own when one workflow has several pbiplint steps.                                              |
